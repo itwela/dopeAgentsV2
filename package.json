@@ -1,27 +1,41 @@
 {
   "name": "agents-2025-dope",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "AI Agents monorepo for 2025 DOPE project",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
-    "start": "next start",
-    "lint": "eslint"
+    "dev": "concurrently \"npm run dev:web\" \"npm run dev:api\" --names \"web,api\" --prefix-colors \"blue,green\"",
+    "build": "npm run build --workspaces --if-present",
+    "start": "npm run start --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "type-check": "npm run type-check --workspaces --if-present",
+    "dev:web": "npm run dev --workspace=@agents-2025-dope/web",
+    "dev:api": "npm run dev --workspace=@agents-2025-dope/api",
+    "build:all": "npm run build --workspace=@agents-2025-dope/agent && npm run build --workspace=@agents-2025-dope/api-client && npm run build --workspace=@agents-2025-dope/api && npm run build --workspace=@agents-2025-dope/web"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "monorepo",
+    "typescript",
+    "nextjs"
+  ],
+  "author": "DOPE Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "concurrently": "^9.2.1",
+    "typescript": "^5.0.0"
   },
   "dependencies": {
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "next": "15.5.3"
-  },
-  "devDependencies": {
-    "typescript": "^5",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
-    "eslint": "^9",
-    "eslint-config-next": "15.5.3",
-    "@eslint/eslintrc": "^3"
+    "@auth/core": "^0.37.0",
+    "@convex-dev/auth": "^0.0.90",
+    "@mendable/firecrawl-js": "^1.21.1",
+    "dotenv": "^14.0.0",
+    "replicate": "^1.2.0"
   }
 }
