@@ -1,7 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
+**/node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -16,9 +17,13 @@
 # next.js
 /.next/
 /out/
+.next/
+**/out/
 
 # production
 /build
+**/build
+**/dist
 
 # misc
 .DS_Store
@@ -39,3 +44,25 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+**/*.tsbuildinfo
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Large files that shouldn't be committed
+*.log
+*.tmp
+*.temp
