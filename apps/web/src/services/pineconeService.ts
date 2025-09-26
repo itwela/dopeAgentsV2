@@ -35,22 +35,9 @@ interface EmployeeData {
 
 dotenv.config();
 
-function generateHighlyObscuredApiKeyDeclaration() {
-  const p1 = "pcsk_pVqpJ_";
-  const p2 = "S6WaMj68tc";
-  const p3 = "vSJ3QsQNmW";
-  const p4 = "V2AppcoNJj";
-  const p5 = "EPUguDDqHW";
-  const p6 = "6eiBs7WHp5";
-  const p7 = "XpbWEJANif";
-  const p8 = "rEd";
-
-  return p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8;
-}
-
 // Get API key from environment variables
 export const getApiKey = () => {
-  const apiKey = generateHighlyObscuredApiKeyDeclaration()
+  const apiKey = process.env.PINECONE_API_KEY
 
   return apiKey;
 };
