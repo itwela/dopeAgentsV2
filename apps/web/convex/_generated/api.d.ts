@@ -8,12 +8,17 @@
  * @module
  */
 
+import type * as CustomProfile from "../CustomProfile.js";
+import type * as auth from "../auth.js";
+import type * as employeeProfiles from "../employeeProfiles.js";
+import type * as http from "../http.js";
+import type * as threads from "../threads.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
-import type * as threads from "../threads.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -24,13 +29,21 @@ import type * as threads from "../threads.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  CustomProfile: typeof CustomProfile;
+  auth: typeof auth;
+  employeeProfiles: typeof employeeProfiles;
+  http: typeof http;
   threads: typeof threads;
 }>;
+declare const fullApiWithMounts: typeof fullApi;
+
 export declare const api: FilterApi<
-  typeof fullApi,
+  typeof fullApiWithMounts,
   FunctionReference<any, "public">
 >;
 export declare const internal: FilterApi<
-  typeof fullApi,
+  typeof fullApiWithMounts,
   FunctionReference<any, "internal">
 >;
+
+export declare const components: {};

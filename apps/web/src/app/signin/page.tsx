@@ -5,6 +5,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Button } from "../../components/ui/button";
 
 export default function SignInPage() {
   const { signIn } = useAuthActions();
@@ -20,8 +24,8 @@ export default function SignInPage() {
 
   if (authed === true) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
       </div>
     );
   }
@@ -29,52 +33,122 @@ export default function SignInPage() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
+
+    console.log(`${step === "signIn" ? "Signing in" : "Signing up"}...`);
     try {
       const formData = new FormData(event.currentTarget);
+      
+      // Log form data for debugging
+      console.log("Form data:", {
+        email: formData.get("email"),
+        password: formData.get("password"),
+        name: formData.get("name"),
+        organization: formData.get("organization"),
+        flow: formData.get("flow")
+      });
+      
       await signIn("password", formData);
+      console.log(`${step === "signIn" ? "Signed in" : "Account created"} successfully!`);
+    } catch (error) {
+      console.error(`Error ${step === "signIn" ? "signing in" : "signing up"}:`, error);
     } finally {
       setIsLoading(false);
+      console.log("Loading complete");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white shadow p-6">
-        <div className="mb-4">
-          <span className="inline-block bg-black text-white px-3 py-1 rounded-full text-xs font-medium">
-            {step === "signIn" ? "Sign In" : "Sign Up"}
-          </span>
-        </div>
+    <div className="min-h-screen flex items-center justify-center px-4 bg-background">
+      <div className="w-full max-w-md">
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl text-center">
+              {step === "signIn" ? "Welcome back" : "Create account"}
+            </CardTitle>
+            <CardDescription className="text-center">
+              {step === "signIn" 
+                ? "Sign in to your account to continue" 
+                : "Enter your information to create your account"
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input 
+                  id="email" 
+                  name="email" 
+                  type="email" 
+                  placeholder="m@example.com"
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input 
+                  id="password" 
+                  name="password" 
+                  type="password" 
+                  required 
+                />
+              </div>
+              {step === "signUp" && (
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input 
+                    id="name" 
+                    name="name" 
+                    type="text" 
+                    placeholder="Your full name"
+                    required 
+                  />
+                </div>
+              )}
+              {step === "signUp" && (
+                <div className="space-y-2">
+                  <Label htmlFor="organization">Organization</Label>
+                  <Input 
+                    id="organization" 
+                    name="organization" 
+                    type="text" 
+                    placeholder="Your organization"
+                    required 
+                  />
+                </div>
+              )}
+              <input name="flow" type="hidden" value={step} />
+              <Button type="submit" disabled={isLoading} className="w-full">
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground" />
+                    {step === "signIn" ? "Signing in..." : "Creating account..."}
+                  </div>
+                ) : (
+                  step === "signIn" ? "Sign in" : "Create account"
+                )}
+              </Button>
+            </form>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input id="email" name="email" type="email" required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-          </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input id="password" name="password" type="password" required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-          </div>
-          {step === "signUp" && (
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-              <input id="name" name="name" type="text" required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            <div className="mt-6 text-center">
+              <Button 
+                variant="ghost" 
+                type="button" 
+                onClick={() => setStep(step === "signIn" ? "signUp" : "signIn")} 
+                className="text-sm"
+              >
+                {step === "signIn" 
+                  ? "Don't have an account? Sign up" 
+                  : "Already have an account? Sign in"
+                }
+              </Button>
             </div>
-          )}
-          <input name="flow" type="hidden" value={step} />
-          <button type="submit" disabled={isLoading} className="w-full bg-black text-white py-2 px-4 rounded-lg font-medium">
-            {isLoading ? (step === "signIn" ? "Signing in..." : "Creating account...") : (step === "signIn" ? "Sign in" : "Create account")}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <button type="button" onClick={() => setStep(step === "signIn" ? "signUp" : "signIn")} className="text-sm text-gray-600">
-            {step === "signIn" ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-          </button>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
+
 
 

@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 15, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/apps/web/src/middleware.ts"],"sourcesContent":["// Temporarily disabled middleware to fix routing issues\n// import { convexAuthNextjsMiddleware } from \"@convex-dev/auth/nextjs/server\";\n\n// export default convexAuthNextjsMiddleware({\n//   convexUrl: \"https://original-turtle-96.convex.cloud\",\n//   verbose: true\n// });\n\n// export const config = {\n//   matcher: [\"/((?!.*\\\\..*|_next|api).*)\", \"/\"],\n// };\n\n\n\n"],"names":[],"mappings":"AAAA,wDAAwD;AACxD,+EAA+E;AAE/E,8CAA8C;AAC9C,0DAA0D;AAC1D,kBAAkB;AAClB,MAAM;AAEN,0BAA0B;AAC1B,kDAAkD;AAClD,KAAK"}}]
+}

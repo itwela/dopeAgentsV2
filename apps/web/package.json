@@ -9,8 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@agents-2025-dope/agent": "*",
-    "@agents-2025-dope/api-client": "*",
+    "@auth/core": "^0.37.0",
+    "@convex-dev/auth": "^0.0.90",
     "@openai/agents": "^0.1.3",
     "@pinecone-database/pinecone": "^6.1.2",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -22,8 +22,8 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "convex": "^1.27.3",
-    "@convex-dev/auth": "^0.0.67",
     "lucide-react": "^0.544.0",
     "motion": "^12.23.18",
     "next": "15.5.3",

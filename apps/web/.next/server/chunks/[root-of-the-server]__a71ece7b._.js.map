@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 64, "column": 0}, "map": {"version":3,"sources":["file:///Users/itwelaibomu/Desktop/code/agents-2025-dope/apps/web/src/app/api/auth/route.ts"],"sourcesContent":["import { convexAuthNextjs } from \"@convex-dev/auth/nextjs/server\";\n\nconst handler = convexAuthNextjs();\n\nexport const GET = handler;\nexport const POST = handler;\n"],"names":[],"mappings":";;;;;;AAAA;;AAEA,MAAM,UAAU,IAAA,iNAAgB;AAEzB,MAAM,MAAM;AACZ,MAAM,OAAO","debugId":null}}]
+}

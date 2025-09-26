@@ -15,6 +15,8 @@ export const currentUser = query({
       subject: v.string(),
       name: v.optional(v.string()),
       email: v.optional(v.string()),
+      role: v.optional(v.string()),
+      organization: v.optional(v.string()),
     }),
     v.null(),
   ),
@@ -29,8 +31,11 @@ export const currentUser = query({
       subject: identity.subject,
       name: (user as any)?.name ?? identity.name,
       email: (user as any)?.email,
+      role: (user as any)?.role,
+      organization: (user as any)?.organization,
     };
   },
 });
+
 
 

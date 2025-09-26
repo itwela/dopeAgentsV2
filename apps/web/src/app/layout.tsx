@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "../components/providers/theme-provider";
 import { AgentChatProvider } from "../components/providers/agent-chat-provider";
+import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import ConvexClientProvider from "./providers/ConvexClientProvider";
 
 const geistSans = Geist({
@@ -20,11 +21,15 @@ export const metadata: Metadata = {
   description: "AI Agents platform for 2025",
 };
 
-export default function RootLayout({
+
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
+  
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -36,11 +41,13 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ConvexClientProvider>
-            <AgentChatProvider userId="user123">
-              {children}
-            </AgentChatProvider>
-          </ConvexClientProvider>
+          <ConvexAuthNextjsServerProvider>
+            <ConvexClientProvider>
+              <AgentChatProvider userId="user123">
+                {children}
+              </AgentChatProvider>
+            </ConvexClientProvider>
+          </ConvexAuthNextjsServerProvider>
         </ThemeProvider>
       </body>
     </html>

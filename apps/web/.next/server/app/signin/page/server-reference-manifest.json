@@ -1,0 +1,20 @@
+{
+  "node": {
+    "0012c601eb4a470e2104252fe1d8400bb66811e77a": {
+      "workers": {
+        "app/signin/page": {
+          "moduleId": "[project]/.next-internal/server/app/signin/page/actions.js { ACTIONS_MODULE0 => \"[project]/node_modules/@convex-dev/auth/dist/nextjs/server/invalidateCache.js [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "invalidateCache",
+          "filename": "node_modules/@convex-dev/auth/dist/nextjs/server/invalidateCache.js"
+        }
+      },
+      "layer": {
+        "app/signin/page": "action-browser"
+      },
+      "exportedName": "invalidateCache",
+      "filename": "node_modules/@convex-dev/auth/dist/nextjs/server/invalidateCache.js"
+    }
+  },
+  "edge": {}
+}
