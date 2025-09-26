@@ -37,9 +37,9 @@ dotenv.config();
 
 // Get API key from environment variables
 export const getApiKey = () => {
-  const apiKey = process.env.PINECONE_API_KEY
+  const apiKey = process.env.NODE_ENV === 'production' ? process.env.PINECONE_API_KEY : process.env.NEXT_PUBLIC_PINECONE_API_KEY;
 
-  return apiKey;
+  return apiKey || '';
 };
 
 const pc = new Pinecone({
