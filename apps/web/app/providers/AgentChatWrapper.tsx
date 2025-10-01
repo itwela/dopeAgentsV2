@@ -12,8 +12,14 @@ interface AgentChatWrapperProps {
 export default function AgentChatWrapper({ children }: AgentChatWrapperProps) {
   const currentUser = useQuery(api.auth.currentUser);
   
+  console.log('[AgentChatWrapper] Current user:', {
+    subject: currentUser?.subject,
+    name: currentUser?.name,
+    email: currentUser?.email,
+  });
+  
   return (
-    <AgentChatProvider userId={currentUser?.subject}>
+    <AgentChatProvider userId={currentUser?.subject} userName={currentUser?.name}>
       {children}
     </AgentChatProvider>
   );

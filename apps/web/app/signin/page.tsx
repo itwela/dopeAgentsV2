@@ -9,14 +9,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Button } from "../../components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 
 export default function SignInPage() {
   const { signIn } = useAuthActions();
   const router = useRouter();
   const [step, setStep] = useState<"signUp" | "signIn">("signIn");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<string>("");
 
   const authed = useQuery(api.auth.isAuthenticated, {});
+  const employeeNames = useQuery(api.employeeProfiles.getEmployeeNames, {});
 
   useEffect(() => {
     if (authed === true) router.push("/agents");
@@ -96,13 +99,29 @@ export default function SignInPage() {
               {step === "signUp" && (
                 <div className="space-y-2">
                   <Label htmlFor="name">Name</Label>
-                  <Input 
-                    id="name" 
-                    name="name" 
-                    type="text" 
-                    placeholder="Your full name"
-                    required 
-                  />
+                  <Select 
+                    value={selectedEmployee} 
+                    onValueChange={setSelectedEmployee}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your name" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employeeNames && employeeNames.length > 0 ? (
+                        employeeNames.map((employee) => (
+                          <SelectItem key={employee._id} value={employee.name}>
+                            {employee.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="loading" disabled>
+                          Loading employees...
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <input type="hidden" name="name" value={selectedEmployee} />
                 </div>
               )}
               {step === "signUp" && (

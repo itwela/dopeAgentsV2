@@ -235,6 +235,28 @@ export const updateEmployeeProfile = mutation({
 });
 
 /**
+ * Get employee names for signup dropdown
+ */
+export const getEmployeeNames = query({
+  args: {},
+  returns: v.array(v.object({
+    _id: v.id("employeeProfiles"),
+    name: v.string(),
+  })),
+  handler: async (ctx) => {
+    const profiles = await ctx.db
+      .query("employeeProfiles")
+      .order("asc")
+      .collect();
+
+    return profiles.map(profile => ({
+      _id: profile._id,
+      name: profile.name,
+    }));
+  },
+});
+
+/**
  * Internal query to get employee profile for RAG operations
  */
 export const getEmployeeProfileInternal = internalQuery({

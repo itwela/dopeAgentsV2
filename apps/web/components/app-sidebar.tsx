@@ -99,9 +99,9 @@ export function AppSidebar() {
         
         {/* Only show conversations on agents route */}
         {isAgentsRoute && (
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <ThreadSidebar className="h-96" />
+          <SidebarGroup className="p-0 m-0">
+            <SidebarGroupContent className="p-0 m-0">
+              <ThreadSidebar className="h-96 p-0 m-0" />
             </SidebarGroupContent>
           </SidebarGroup>
         )}

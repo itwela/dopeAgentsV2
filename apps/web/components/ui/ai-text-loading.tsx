@@ -42,7 +42,7 @@ export default function AITextLoading({
     }, [interval, texts.length]);
 
     return (
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center min-w-[0px]">
             <motion.div
                 className="relative px-4 py-2 w-full"
                 initial={{ opacity: 0 }}

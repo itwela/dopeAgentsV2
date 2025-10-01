@@ -54,6 +54,7 @@ export default defineSchema({
   conversationThreads: defineTable({
     threadId: v.string(),
     userId: v.optional(v.string()),
+    userName: v.optional(v.string()), // User's actual name for filtering
     agentId: v.string(),
     title: v.string(),
     history: v.array(v.any()), // AgentInputItem[]
@@ -62,5 +63,26 @@ export default defineSchema({
   })
     .index("by_thread_id", ["threadId"])
     .index("by_user_id", ["userId"])
+    .index("by_user_name", ["userName"])
     .index("by_agent_id", ["agentId"]),
+  dopeActiveAccounts: defineTable({
+    account_id: v.optional(v.string()),
+    hubspot_id: v.optional(v.string()),
+    account_name: v.string(),
+    industry: v.optional(v.string()),
+    Jan_2025: v.optional(v.string()),
+    Feb_2025: v.optional(v.string()),
+    Mar_2025: v.optional(v.string()),
+    Apr_2025: v.optional(v.string()),
+    May_2025: v.optional(v.string()),
+    Jun_2025: v.optional(v.string()),
+    Jul_2025: v.optional(v.string()),
+    Aug_2025: v.optional(v.string()),
+    Sep_2025: v.optional(v.string()),
+    Oct_2025: v.optional(v.string()),
+    Nov_2025: v.optional(v.string()),
+    Dec_2025: v.optional(v.string()),
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
+  }).index("by_account_name", ["account_name"]),
 });

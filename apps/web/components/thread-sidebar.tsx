@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import { Card, CardContent } from './ui/card';
-import { Plus, MessageSquare, Clock, Trash2, X } from 'lucide-react';
+import { Plus, MessageSquare, Trash2, X } from 'lucide-react';
 import { useAgentChat } from './providers/agent-chat-provider';
 
 interface ThreadSidebarProps {
@@ -57,47 +57,11 @@ export const ThreadSidebar: React.FC<ThreadSidebarProps> = ({ className }) => {
     setThreadToDelete(null);
   };
 
-  // Get unique agents used in a thread's history
-  const getUniqueAgentsInThread = (thread: any) => {
-    const agents = new Set<string>();
-    
-    // Add the main agent for the thread
-    agents.add(thread.agentId);
-    
-    // Check history for other agents
-    if (thread.history) {
-      thread.history.forEach((item: any) => {
-        if (item.role === 'assistant' && item.agentName) {
-          // Map agent names to IDs
-          const agentId = item.agentName.toLowerCase().replace(/\s+/g, '-');
-          agents.add(agentId);
-        }
-      });
-    }
-    
-    return Array.from(agents);
-  };
-
-  const getAgentAvatar = (agentId: string) => {
-    switch (agentId) {
-      case 'hermes':
-        return { initials: 'HER', color: 'bg-red-500' };
-      case 'steve':
-        return { initials: 'STE', color: 'bg-red-500' };
-      case 'atlas':
-        return { initials: 'ATL', color: 'bg-red-500' };
-      case 'juno':
-        return { initials: 'JUN', color: 'bg-red-500' };
-      case 'dope-admin':
-        return { initials: 'DOP', color: 'bg-red-500' };
-      default:
-        return { initials: agentId.substring(0, 2).toUpperCase(), color: 'bg-gray-400' };
-    }
-  };
+  // Agents badges removed per request
 
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
+    <div className={`flex flex-col h-full p-0 m-0 ${className}`}>
       {/* Header */}
       <div className="p-2 border-b border-border">
         <div className="flex items-center justify-between">
@@ -114,7 +78,7 @@ export const ThreadSidebar: React.FC<ThreadSidebarProps> = ({ className }) => {
       </div>
 
       {/* Threads List */}
-      <ScrollArea className="flex-1 w-full">
+      <ScrollArea className="w-[100%] p-0">
         {threads.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-center">
             <MessageSquare className="h-8 w-8 text-muted-foreground mb-2" />
@@ -124,54 +88,25 @@ export const ThreadSidebar: React.FC<ThreadSidebarProps> = ({ className }) => {
             </p>
           </div>
         ) : (
-          <div className="space-y-2 w-[95%] place-self-center py-4 ">
+          <div className="space-y-2 w-[90%] flex flex-col  pl-2 py-4 ">
             {threads.map((thread) => (
               <Card
                 key={thread.threadId}
-                className={`cursor-pointer transition-all duration-200 hover:shadow-sm ${
+                className={`cursor-pointer p-0 transition-all duration-200 hover:shadow-sm ${
                   currentThreadId === thread.threadId
                     ? 'ring-2 ring-primary bg-primary/5'
                     : 'hover:bg-muted/50'
                 }`}
                 onClick={() => selectThread(thread.threadId)}
               >
-                <CardContent className="p-3">
+                <CardContent className="p-1 px-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0 mr-2">
+                    
+                    <div className="flex-1 min-w-0 max-w-[100px] mr-2">
                       <h3 className="text-sm font-medium text-foreground truncate mb-1">
                         {thread.title}
                       </h3>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          <span>{formatDate(thread.lastUpdated)}</span>
-                        </div>
-                        
-                        {/* Agent Avatars */}
-                        <div className="flex items-center -space-x-1">
-                          {getUniqueAgentsInThread(thread).slice(0, 2).map((agentId, index) => {
-                            const agent = getAgentAvatar(agentId);
-                            return (
-                              <div
-                                key={agentId}
-                                className={`w-10 h-6 rounded-full ${agent.color} flex items-center justify-center text-white border-2 border-background shadow-sm`}
-                                style={{ zIndex: 10 - index }}
-                                title={agentId.charAt(0).toUpperCase() + agentId.slice(1)}
-                              >
-                                <span className="text-xs font-semibold leading-none">{agent.initials}</span>
-                              </div>
-                            );
-                          })}
-                          {getUniqueAgentsInThread(thread).length > 2 && (
-                            <div
-                              className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs text-muted-foreground border-2 border-background shadow-sm"
-                              title={`+${getUniqueAgentsInThread(thread).length - 4} more agents`}
-                            >
-                              <span className="text-xs font-medium">+{getUniqueAgentsInThread(thread).length - 4}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      <div className="h-0.5" />
                     </div>
                     
                     <Button
@@ -182,6 +117,7 @@ export const ThreadSidebar: React.FC<ThreadSidebarProps> = ({ className }) => {
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                  
                   </div>
                 </CardContent>
               </Card>

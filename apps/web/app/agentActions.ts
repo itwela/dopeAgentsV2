@@ -21,24 +21,56 @@ async function analyzeWebsiteViaFirecrawl(url: string, analysisType: 'content' |
 
     // Define the structured schema we want from any website with content type
     const WebsiteSummarySchema = z.object({
-      summaryOfTheBusiness: z.string().describe("A summary of the business, go into detail as much as possible."),
-      aboutTheBusiness: z.string().describe("About the business; useful background for understanding the company."),
-      servicesOffered: z.string().describe("Services they offer with details."),
+      // Core
+      summaryOfTheBusiness: z.string().describe("A comprehensive summary of the business and what they do."),
+      aboutTheBusiness: z.string().describe("Background information about the company (history, mission, values)."),
+      servicesOffered: z.string().describe("Services they offer with details and examples."),
       whereTheyServe: z.string().describe("Where they serve, geography/markets."),
+
+      // Differentiation & audience
+      valueProposition: z.string().describe("Clear value proposition and benefits they promise to customers."),
+      keyDifferentiators: z.array(z.string()).describe("Key differentiators vs competitors (unique features, guarantees, speed, pricing, specialization)."),
+      targetCustomers: z.string().describe("Target audience, industries served, and ideal customer profiles."),
+
+      // Trust & proof
+      trustSignals: z.array(z.string()).describe("Trust signals such as certifications, case studies, social proof, partnerships."),
+      testimonials: z.array(z.string()).describe("Representative testimonials or review highlights."),
+      notableClients: z.array(z.string()).describe("Notable clients or logos mentioned."),
+      awardsOrPress: z.array(z.string()).describe("Awards, media features, or notable press mentions."),
+
+      // Pricing & offers
+      pricingOrOffers: z.string().describe("Any pricing information, free trials, discounts, or promotions."),
+
+      // Calls-to-action & contact
+      primaryCallToActions: z.array(z.string()).describe("Primary calls-to-action (CTA) text and contexts (e.g., 'Get a Quote', 'Book a Demo')."),
+      contactMethods: z.array(z.string()).describe("Contact methods found (phone, email, forms, chat) and any key details."),
+      locations: z.array(z.string()).describe("Physical locations, service areas, or addresses if listed."),
+      socialLinks: z.array(z.string()).describe("Links to social profiles (Facebook, LinkedIn, Instagram, etc.)."),
+
+      // Content structure & SEO
+      topServices: z.array(z.string()).describe("Top service categories or key offerings highlighted on the site."),
+      exampleHeadlines: z.array(z.string()).describe("Representative headlines or copy snippets that capture positioning."),
+      seoKeywords: z.array(z.string()).describe("Likely SEO keywords/phrases inferred from content."),
+      recentBlogPosts: z.array(z.string()).describe("Recent blog/news post titles if present."),
+      faqs: z.array(z.string()).describe("Frequently asked questions or common topics addressed."),
+      technologiesOrPlatforms: z.array(z.string()).describe("Technologies, platforms, or integrations mentioned (e.g., Shopify, HubSpot)."),
     });
 
     // Define the structured schema we want from any website with gather-style-of-speaking type
     const GatherStyleOfSpeakingSchema = z.object({
-      toneAndVoice: z.string().describe("The overall tone and voice of the website - formal, casual, professional, friendly, authoritative, conversational, etc."),
-      writingStyle: z.string().describe("The writing style characteristics - sentence structure, paragraph length, use of technical jargon, storytelling approach, etc."),
-      languagePatterns: z.string().describe("Specific language patterns, vocabulary choices, industry terminology, colloquialisms, and recurring phrases or expressions."),
-      communicationApproach: z.string().describe("How they communicate with their audience - direct vs indirect, educational vs promotional, problem-focused vs solution-focused, etc."),
-      emotionalTone: z.string().describe("The emotional undertone of the content - enthusiastic, empathetic, urgent, reassuring, confident, humble, etc."),
-      brandPersonality: z.string().describe("The personality that comes through in the writing - innovative, traditional, rebellious, trustworthy, cutting-edge, established, etc."),
-      rhetoricalDevices: z.string().describe("Use of questions, calls-to-action, testimonials, statistics, storytelling, metaphors, or other persuasive techniques."),
-      audienceAddressing: z.string().describe("How they address their audience - formal titles, first person, second person, inclusive language, industry-specific addressing, etc."),
-      contentStructure: z.string().describe("How they organize and present information - bullet points, numbered lists, headers, short vs long-form content, etc."),
-      examplePhrases: z.array(z.string()).describe("Specific example phrases, sentences, or word choices that exemplify their style of communication."),
+      toneAndVoice: z.string().describe("The overall tone and voice (formal, casual, professional, friendly, authoritative, conversational, etc.)."),
+      writingStyle: z.string().describe("Style characteristics (sentence structure, paragraph length, jargon level, storytelling approach)."),
+      languagePatterns: z.string().describe("Vocabulary choices, industry terminology, recurring phrases, and patterns."),
+      communicationApproach: z.string().describe("Direct vs indirect, educational vs promotional, problem vs solution-focused, etc."),
+      emotionalTone: z.string().describe("Emotional undertone (enthusiastic, empathetic, urgent, reassuring, confident, humble, etc.)."),
+      brandPersonality: z.string().describe("Brand personality traits (innovative, traditional, trustworthy, cutting-edge, etc.)."),
+      rhetoricalDevices: z.string().describe("Use of questions, CTAs, testimonials, statistics, storytelling, metaphors, etc."),
+      audienceAddressing: z.string().describe("How they address readers (first/second person, inclusive language, titles)."),
+      contentStructure: z.string().describe("Organization conventions (bullets, numbered lists, headers, short vs long-form)."),
+      examplePhrases: z.array(z.string()).describe("Representative phrases/sentences that capture the voice."),
+      audiencePersona: z.string().describe("Who they seem to be speaking to (roles, industries, sophistication)."),
+      brandValues: z.array(z.string()).describe("Core values emphasized in copy (quality, speed, transparency, sustainability, etc.)."),
+      formattingConventions: z.array(z.string()).describe("Notable formatting (emoji usage, capitalization, punctuation style)."),
     });
 
     let schema: z.ZodSchema;
@@ -51,27 +83,77 @@ async function analyzeWebsiteViaFirecrawl(url: string, analysisType: 'content' |
       systemPrompt = "You are a helpful assistant that extracts the style of speaking of the website.";
     } else {
       schema = WebsiteSummarySchema;
-      prompt = "Extract the summary of the business, about the business, services offered, and where they serve.";
-      systemPrompt = "You are a helpful assistant that extracts the summary of the business, about the business, services offered, and where they serve.";
+      prompt = "Extract a comprehensive, structured profile of the business suitable for highly personalized outreach. Include summary, about, services, markets served, value proposition, key differentiators, target customers, trust signals, testimonials, notable clients, awards/press, pricing or offers, primary CTAs, contact methods, locations, social links, top services, example headlines, likely SEO keywords, recent blog/news titles, FAQs, and technologies/platforms mentioned.";
+      systemPrompt = "You are a helpful assistant that extracts a detailed business profile optimized for sales/marketing personalization. Provide thorough, concise, factual information strictly from the website content.";
     }
 
     // Use Firecrawl Extract with schema. We keep scrapeOptions lean for speed; limit is not used by extract directly.
-    const extraction = await firecrawl.extract([formattedUrl], {
-      schema: schema,
-      scrapeOptions: {
-        onlyMainContent: true,
-      },
-      prompt: prompt,
-      systemPrompt: systemPrompt,
-      showSources: true,
-      includeSubdomains: true,
-      enableWebSearch: false,
-    });
+    let extraction: unknown;
+    try {
+      extraction = await firecrawl.extract([formattedUrl], {
+        schema: schema,
+        scrapeOptions: {
+          onlyMainContent: true,
+        },
+        prompt: prompt,
+        systemPrompt: systemPrompt,
+        showSources: true,
+        includeSubdomains: true,
+        enableWebSearch: false,
+      } as any);
+    } catch (err) {
+      // Deep error serialization to find the real error details
+      const deepSerialize = (obj: any, depth = 0): string => {
+        if (depth > 3) return '[Max depth reached]';
+        if (obj === null) return 'null';
+        if (typeof obj !== 'object') return String(obj);
+        
+        try {
+          const result: string[] = [];
+          for (const [key, value] of Object.entries(obj)) {
+            if (typeof value === 'object' && value !== null) {
+              result.push(`${key}: ${deepSerialize(value, depth + 1)}`);
+            } else {
+              result.push(`${key}: ${String(value)}`);
+            }
+          }
+          return `{${result.join(', ')}}`;
+        } catch {
+          return '[Circular or unstringifiable]';
+        }
+      };
+
+      const respData = (err as any)?.response?.data ?? (err as any)?.data;
+      const errorDetails = (err as any)?.error ?? (err as any)?.details;
+      const readable = [
+        `name: ${(err as any)?.name || 'Error'}`,
+        `message: ${(err as any)?.message || 'Unknown Firecrawl error'}`,
+        respData ? `response.data: ${deepSerialize(respData)}` : undefined,
+        errorDetails ? `error.details: ${deepSerialize(errorDetails)}` : undefined,
+        `fullError: ${deepSerialize(err)}`,
+        `stack: ${(err as any)?.stack || ''}`,
+      ].filter(Boolean).join('\n');
+
+      console.error("[Firecrawl.extract] Failed", {
+        url: formattedUrl,
+        analysisType,
+        nodeEnv: process.env.NODE_ENV,
+        readable,
+      });
+
+      return {
+        success: false as const,
+        source: { url: formattedUrl, fetchedAt: new Date().toISOString() },
+        contentType: "error" as const,
+        error: readable,
+        structured: undefined,
+      } as const;
+    }
 
     const structured = (extraction as any)?.data as z.infer<typeof WebsiteSummarySchema> | undefined;
 
     const payload = {
-      success: true,
+      success: true as const,
       source: { url: formattedUrl, fetchedAt: new Date().toISOString() },
       contentType: "json" as const,
       // Keep a string content for backwards compatibility, but prefer `structured` downstream
@@ -116,19 +198,32 @@ ${websiteUrl ? 'Include specific analysis of the provided website as a primary s
 
   const systemPrompt = "You are a senior research analyst capable of researching any topic thoroughly. Provide comprehensive, evidence-based analysis that directly addresses the research query. Be precise, detailed, and focus on actionable insights.";
 
-  const research = await firecrawl.deepResearch(query, {
-    maxDepth: 5,
-    timeLimit: 300,
-    maxUrls: websiteUrl ? 15 : 25, // More URLs if no specific website
-    analysisPrompt: analysisPrompt,
-    systemPrompt: systemPrompt,
-    formats: ["markdown", "json"],
-    jsonOptions: {
-      schema: UniversalResearchSchema,
-      systemPrompt: "Return comprehensive research results in valid JSON format. Address the specific research query thoroughly in each field.",
-      prompt: "Provide detailed, well-researched answers in each field. The fullReportMarkdown should be a complete, professional research report.",
-    },
-  });
+  let research;
+  try {
+    research = await firecrawl.deepResearch(query, {
+      maxDepth: 5,
+      timeLimit: 300,
+      maxUrls: websiteUrl ? 15 : 25, // More URLs if no specific website
+      analysisPrompt: analysisPrompt,
+      systemPrompt: systemPrompt,
+      formats: ["markdown", "json"],
+      jsonOptions: {
+        schema: UniversalResearchSchema,
+        systemPrompt: "Return comprehensive research results in valid JSON format. Address the specific research query thoroughly in each field.",
+        prompt: "Provide detailed, well-researched answers in each field. The fullReportMarkdown should be a complete, professional research report.",
+      },
+    });
+  } catch (err) {
+    console.error("[Firecrawl.deepResearch] Failed", {
+      query,
+      websiteUrl: websiteUrl ? quickFormatUrl(websiteUrl) : undefined,
+      nodeEnv: process.env.NODE_ENV,
+      errorName: (err as Error)?.name,
+      errorMessage: (err as Error)?.message,
+      errorStack: (err as Error)?.stack,
+    });
+    throw new Error(`Firecrawl deepResearch failed: ${(err as Error)?.message}`);
+  }
 
   return research;
 

@@ -13,16 +13,18 @@ import {
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../convex/_generated/api";
 import Replicate from "replicate";
-import { analyzeWebsiteViaFirecrawl, deepResearchAnything } from '../../../agentActions';
+//import { deepResearchAnything } from '../../../agentActions';
 import OpenAI from "openai";
-import { zodTextFormat } from "openai/helpers/zod";
+//import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { listIndexesFromPinecone, createIndex, addToIndex, addEmployeeDataToIndex, addTranscriptDataToIndex, semanticSearch } from '../../../../services/pineconeService';
 import { INDEX_TYPES } from '../../../../types/metadata';
+import { api as convexApi } from "../../../../convex/_generated/api";
 
 
 import { setDefaultOpenAIKey } from '@openai/agents';
 import { setTracingExportApiKey } from '@openai/agents';
+import { tr } from 'motion/react-client';
 setDefaultOpenAIKey(process.env.NODE_ENV === 'production' ? process.env.OPENAI_API_KEY! : process.env.NEXT_PUBLIC_OPENAI_API_KEY!);
 setTracingExportApiKey(process.env.NODE_ENV === 'production' ? process.env.OPENAI_API_KEY! : process.env.NEXT_PUBLIC_OPENAI_API_KEY!);
 
@@ -37,33 +39,49 @@ const openai = new OpenAI({
 // Ensure Node.js runtime for stdio processes
 export const runtime = 'nodejs';
 
-// MCP: Sequential Thinking server via stdio
-const sequentialThinkingServer = new MCPServerStdio({
-  name: 'sequential_thinking',
-  fullCommand: 'npx -y @modelcontextprotocol/server-sequential-thinking',
-});
+// MCP: Sequential Thinking server via hosted service
+// Using hostedMcpTool instead of local stdio server for better deployment compatibility
+// const sequentialThinkingTool = hostedMcpTool({
+//   serverLabel: 'sequential_thinking',
+//   //serverUrl: process.env.MCP_SEQUENTIAL_THINKING_URL || 'https://api.mcp-cloud.io/sequential-thinking',
+//   serverUrl: process.env.MCP_SEQUENTIAL_THINKING_URL || 'https://glama.ai/mcp/instances/svuec7nlpl/mcp',
+//   // Add authorization if needed
+//   // authorization: process.env.MCP_AUTH_TOKEN,
+// });
 
 /* ------------------------------------------------------------------------------------------------
 
 REVIEW: Types
 
--------------------------------------------------------------------------------------------------- */ 
+-------------------------------------------------------------------------------------------------- */
 
+/*
 const emailSchema = z.object({
-  subject: z.string(),
-  body: z.string(),
+  option1: z.object({
+    subject: z.string(),
+    body: z.string(),
+  }),
+  option2: z.object({
+    subject: z.string(),
+    body: z.string(),
+  }),
+  option3: z.object({
+    subject: z.string(),
+    body: z.string(),
+  }),
   businessName: z.string(),
   templateUsed: z.string(),
   websiteName: z.string(),
   reasonForUsingTemplate: z.string().describe('The reason for using the template. No longer than 100 words.'),
 });
+*/
 
 
 /* ------------------------------------------------------------------------------------------------
 
 REVIEW: Constants
 
--------------------------------------------------------------------------------------------------- */ 
+-------------------------------------------------------------------------------------------------- */
 
 const emailTemplates = [
   {
@@ -95,7 +113,7 @@ const emailTemplates = [
     Reply "GO" and I'll set it up now.
     – Team DOPE`,
   },
-  
+
   {
     name: 'Mail Out in <5 Days',
     description: 'Quick turnaround campaign focusing on speed and neighboring areas',
@@ -110,7 +128,7 @@ const emailTemplates = [
     Ready to launch this week?
     – Team DOPE`,
   },
-  
+
 ];
 const whoIsDopeMarketing = `
     Who is DOPE Marketing?
@@ -145,8 +163,6 @@ You are Dope Marketing’s senior conversion copywriter. Adopt one consistent vo
 
 Core priority: personalization that converts
 
-When the user provides client info, weave that information into the subject or preview and or body so the message feels specific and relevant.
-Use client info to make one concrete, believable claim (e.g., “Given your Little Canada house‑wash offering, a 7‑day pilot in one neighborhood usually surfaces booked jobs”) — do NOT invent data or claim site scans unless the user explicitly provided those facts.
 Use no more than one or two/ specific signals to avoid overload; keep personalization tight and evidence‑based.
 Personalization should always support an immediate conversion action (pilot, audit, inspection).
 Voice & tone
@@ -156,59 +172,8 @@ Confident and efficient — professional but energetic; avoid jokes, slang, or p
 Subtle urgency/seasonality allowed when relevant (e.g., “fall leaf load,” “pre‑winter”).
 Structure & format (required)
 
-Output exactly these labeled fields:
-Subject: [≤ 7 words, benefit-driven, may include one token like City or Service]
-Preview: [1-line clarifier, ~8–12 words]
-Body: [80–140 words — single paragraph or 2 short paragraphs; optional 1–3 bullets max]
-Signoff: —Dope Marketing
-Exactly one CTA and it must be reply-text (e.g., Reply “YES”, Reply “Set it up”, Reply “Go”). No multiple CTAs or link-first CTAs in initial outreach.
-Content rules
-
-Open with a 1-line hook that uses the provided client signal (if any) and frames a specific problem or seasonal trigger (e.g., “For Little Canada homes, fall gutters create winter risk”). If no signal provided, use a neutral industry hook.
-Follow with a short insight/benefit (1–2 sentences) using active verbs: run, test, pilot, measure, automate, scale.
-Offer must be one sentence and scoped: what Dope will do, what client does, and what deliverable/metric is delivered (e.g., “7‑day pilot — we run ads, deliver booked list + HubSpot metrics”).
-Include one credibility token when appropriate (HubSpot, CPL, booked job, before/after photos, years in market).
-Personalization limit: at most one specific signal beyond Company to keep messages sharp and believable.
-Language & phrasing
-
-Short, punchy sentences. Active voice.
-Use numeric quantifiers and concrete timeframes (7‑day pilot, 20‑minute audit, 30‑minute inspection).
-Favor reply CTAs and low‑friction asks.
-Avoid corporate buzzwords and emotional fluff.
-Include one small proof point in follow-ups if available (metric + similar client).
-Bullets
-
-Use bullets only for clarity (2–4 items maximum). Each ≤ 10 words.
-Length & quality checks
-
-Body length: 80–140 words. Truncate if longer.
-Exactly one reply-based CTA.
-No jokes, slang, or founder anecdotes.
-Use at least one credibility token when relevant.
-Subject ≤ 7 words and benefit-focused.
-Tokens/phrases to use
-
-pilot, run, test, measure, ship, automate, track, CPL, booked job(s), HubSpot, photo documentation, neighborhood push, booking flow, steam ice-dam removal, 7‑day pilot, 20‑minute audit.
-Prohibitions
-
 Do not invent facts or attribute actions you haven’t been given. Only use client details the user supplies.
 No more than one casual/founder‑energy phrase per email and only if it aids clarity.
-Clarifying rule
-
-If required input is missing (Company, Service, or CTA), ask exactly one clarifying question instead of guessing.
-
-`
-const whenToUseTools = `
-
-  If you are given a task with more than 1 step, you must use sequential thinking to plan out the task first.
-  Then, you must use the appropriate tool to complete each step.
-  Then, you must return the final result to the user.
-
-  If you are given a task or find you need up to date information, you can use your best judgement on if the web search tool would be useful.
-
-  If a user says: I want to use your web search tool to... then you should use the web search tool.
-  I want to use your thinking mode tool to... then you should use the sequential thinking tool.
-
 `
 const howToGenerateAProsal = `
 
@@ -235,7 +200,7 @@ const extractContent = (content: any): string => {
     if (content.text) return content.text;
     if (content.content) return content.content;
     if (Array.isArray(content)) {
-      return content.map(c => 
+      return content.map(c =>
         typeof c === 'string' ? c : (c.text || c.content || JSON.stringify(c))
       ).join(' ');
     }
@@ -255,7 +220,7 @@ const generateConversationTitle = async (firstMessage: string) => {
     const userPrompt = `
     Generate a title for this conversation that starts with: "${firstMessage}"
     `;
-    
+
     const response = await openai.chat.completions.create({
       model: "gpt-5-nano",
       messages: [
@@ -271,99 +236,141 @@ const generateConversationTitle = async (firstMessage: string) => {
     console.error('Error generating conversation title:', error);
     // Return a fallback title based on the first message
     const truncatedMessage = firstMessage.substring(0, 30);
-    return truncatedMessage.length < firstMessage.length 
-      ? `${truncatedMessage}...` 
+    return truncatedMessage.length < firstMessage.length
+      ? `${truncatedMessage}...`
       : truncatedMessage;
   }
 }
 
+/*
+*/
+const zipCodeAnalysisAgent = new Agent({
+  name: 'MarketAnalyst',
+  instructions: `You are a market research analyst specializing in geographic and demographic analysis for local service businesses. 
+        
+Analyze ZIP code demographic data and provide actionable strategic insights. Focus on:
+- Market size and opportunity
+- Customer segmentation and targeting  
+- Pricing strategies based on income data
+- Service area prioritization
+- Marketing recommendations
+- Growth opportunities
+
+Provide concrete, data-driven recommendations. If you don't have access to real-time data, provide the best analysis possible with available information and clearly note what data would be needed for more precise recommendations. Do not ask questions - just provide the analysis.`,
+ model: 'gpt-5-mini',
+ tools: [webSearchTool()],
+ modelSettings: { parallelToolCalls: true }
+});
+
+const businessDataExtractionAgent = new Agent({
+  name: 'BusinessDataExtraction',
+  instructions: `You are a business data extraction agent. Extract comprehensive business data from websites and provide detailed analysis.
+
+  Extract all relevant business data including: services, markets served, value proposition, differentiators, target customers, trust signals, testimonials, pricing, CTAs, contact methods, locations, social links, headlines, SEO keywords, blog/news titles, FAQs, and technologies mentioned.
+  
+  Be thorough, detailed, and provide actionable insights. Do not ask questions - just extract and analyze the data provided.`,
+  tools: [webSearchTool()],
+  model: "gpt-5-mini",
+  modelSettings: { parallelToolCalls: true }
+});
+
+// Tiny agent to generate concise thread titles from message snippets
+const titleGeneratorAgent = new Agent({
+  name: 'TitleGenerator',
+  instructions: `You write short, clear chat titles.
+
+RULES:
+- Max 50 characters
+- Specific and descriptive
+- No quotes or punctuation at ends
+- Title case preferred
+- Return ONLY the title text`,
+  tools: [],
+  model: 'gpt-5-mini',
+  modelSettings: { parallelToolCalls: false }
+});
+
+const emailCreationAgent = new Agent({
+  name: 'EmailCreation',
+  instructions: `You are an email creation specialist for Dope Marketing.
+  
+  ${dopeVoice}
+  
+  Using the business data and market analysis provided, create 3 compelling outreach email options that:
+  1. Demonstrate deep understanding of the client's business and market
+  2. Incorporate specific insights from website research and demographic data
+  3. Follow Dope Marketing's voice and formatting standards
+  4. Include clear CTAs that drive immediate action
+  
+  Return all 3 email options with Subject, Preview, Body, and Signoff for each. Do not ask questions - just create the emails based on the provided data.`,
+  tools: [],
+  model: "gpt-5-mini",
+  modelSettings: { parallelToolCalls: false }
+});
+
+
 /* ------------------------------------------------------------------------------------------------
 
-REVIEW TOOLS FOR HERMES
+TOOL KEY-PAIR MAPPINGS
 
--------------------------------------------------------------------------------------------------- */ 
+-------------------------------------------------------------------------------------------------- */
+
+// Tool display names mapping for cleaner user interface
+const TOOL_DISPLAY_NAMES = {
+  // Email & Proposal Tools
+  'list_templates': '📧 Email Templates',
+  'list_how_to_generate_a_proposal': '📋 Proposal Guide',
+  'in_depth_business_analysis': '🔍 Business Analysis',
+  
+  // Leadership & Team Tools
+  'facilitate_standup': '👥 Standup Meetings',
+  
+  // Pinecone Database Tools
+  'pinecone_list_indexes': '🗂️ DOPE List Indexes',
+  'pinecone_create_index': '➕ DOPE Create Index',
+  'pinecone_add_to_index': '📝 DOPE Add Data',
+  'pinecone_add_employee_data_to_index': '👤 DOPE Add Employee Data',
+  'pinecone_add_transcript_data_to_index': '📄 DOPE Add Transcript',
+  'pinecone_semantic_search': '🔎 DOPE Semantic Search',
+  
+  // Specialized Pinecone Searches
+  'pinecone_company_knowledge_semantic_search': '🏢 DOPE Company Knowledge',
+  'pinecone_employee_data_semantic_search': '👥 DOPE Employee Profiles',
+  'pinecone_transcript_data_semantic_search': '📝 DOPE Transcript Search',
+  'pinecone_email_templates_semantic_search': '📧 DOPE Email Templates Search',
+  'pinecone_faq_data_semantic_search': '❓ DOPE FAQ Search',
+  
+  // Account Management
+  'dope_active_account_lookup': '📊 Account Lookup',
+  'dope_active_account_upsert': '➕ Add Account Data',
+  
+  // Web Tools
+  'web_search': '🌐 Web Search'
+};
+
+// Function to get display name for a tool
+export const getToolDisplayName = (toolName: string): string => {
+  return TOOL_DISPLAY_NAMES[toolName as keyof typeof TOOL_DISPLAY_NAMES] || toolName;
+};
+
+// Export the tool display names mapping
+export { TOOL_DISPLAY_NAMES };
+
+/* ------------------------------------------------------------------------------------------------
+
+TOOLS
+
+-------------------------------------------------------------------------------------------------- */
 
 const listTemplatesTool = tool({
   name: 'list_templates',
-  description: 'List all the templates available',
+  description: 'List all the templates available. Used when an Account Manager asks for a template or wants to see all templates or wants to understand what templates are available.',
   parameters: z.object({}),
   execute: async (input) => {
     return emailTemplates;
   },
 });
-const emailCreationByWebsiteAndTemplateTool = tool({
-  name: 'email_creation_by_website_and_template',
-  description: 'Create an email based on a website and template',
-  parameters: z.object({
-    websiteName: z.string().describe('The website to use for scraping'),
-    businessName: z.string().describe('The business name to use'),
-    userRequestedTemplateName: z.string().nullable().describe('The template to use if the user explicitly requested it'),
-  }),
-  execute: async (input) => {
 
-    const { websiteName, businessName, userRequestedTemplateName } = input;  
-
-    const allScrapedWebsiteInformation = await analyzeWebsiteViaFirecrawl(websiteName, 'content');
-
-    // Prefer structured extraction result from Firecrawl; fallback to OpenAI summarizer if unavailable
-    const tailoredSummaryOfWebsiteScrape = allScrapedWebsiteInformation?.structured
-    
-    const systemPrompt = `Your goal is to write a higly personlized outreach email FROM DOPE TO a potential client using all the information provided to you.
-
-    Here is some information about DOPE Marketing:
-    ${whoIsDopeMarketing}
-
-    Here is the voice of DOPE Marketing:
-    ${dopeVoice}
-
-
-  EMAIL TEMPLATES TO USE (from DOPE's perspective), you must use one of these templates:
-  ${emailTemplates.map(template => `Name: ${template.name}\nDescription: ${template.description}\nTemplate: ${template.template}`).join('\n\n')}
-
-
-    Generate a complete, personalized marketing email FROM DOPE TO ${businessName}.`;
-
-    const userPrompt = `
-
-    TARGET BUSINESS NAME:
-    ${businessName}
-
-    TARGET BUSINESS WEBSITE INFORMATION:
-    ${tailoredSummaryOfWebsiteScrape}
-
-    ${userRequestedTemplateName ? `
-      The User explicitly requested the following template: ${emailTemplates.find(template => template.name === userRequestedTemplateName)?.name}` 
-    : ``}
-
-    Generate a complete, personalized marketing email FROM DOPE TO ${businessName}.`;
-
-    const response = await openai.responses.parse({
-      model: "gpt-5-mini",
-      input: [
-        { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: userPrompt,
-        },
-      ],
-      text: {
-        format: zodTextFormat(emailSchema, "email"),
-      },
-    });
-    
-    const emailResponseData = response.output_parsed;
-    
-    return {
-        subject: emailResponseData?.subject,
-        body: emailResponseData?.body,
-        businessName: emailResponseData?.businessName,
-        templateUsed: emailResponseData?.templateUsed,
-        websiteName: emailResponseData?.websiteName,
-        reasonForUsingTemplate: emailResponseData?.reasonForUsingTemplate,
-    };
-
-  },
-});
 const listHowToGenerateAProsal = tool({
   name: 'list_how_to_generate_a_proposal',
   description: 'List the steps to generate a proposal',
@@ -373,11 +380,175 @@ const listHowToGenerateAProsal = tool({
   },
 });
 
+const inDepthBusinessAnalysisTool = tool({
+  name: 'in_depth_business_analysis',
+  description: 'Perform comprehensive business analysis. Return the complete analysis with all agent outputs - business research, market analysis, and email options. CRITICAL: Do not summarize, condense, or format the agent outputs. Return them exactly as the agents produced them. Do not add commentary, explanations, or formatting. Just return the raw agent outputs.',
+  parameters: z.object({
+    websiteName: z.string().describe('The website to use for scraping'),
+    businessZipCode: z.string().describe('The business zip code to use for market analysis'),
+    businessName: z.string().optional().nullable().describe('The business name to use'),
+    primaryContactName: z.string().optional().nullable().describe('Primary contact name for the business (e.g., Jane Doe)'),
+  }),
+
+  execute: async (input) => {
+
+    const { websiteName, businessZipCode, businessName, primaryContactName } = input;
+    
+
+    const businessAnalizerPrompt = `
+    I need you to build a business strategy for this business.
+
+    - Research their website and identify all services they offer specifically for the fall season. Do NOT include any winter services.
+    - Be exhaustive in your research so I can appear as an expert in the business's service area.
+    - Highlight the services and areas that the business owner would recognize, and help me position myself as an expert for targeting these specific areas for the business's services.
+
+    ${websiteName ? `- Research the website: ${websiteName}` : ''}
+    `;
+    
+    // research business Data
+    console.log(`[inDepthBusinessAnalysisTool] Running BusinessDataExtraction agent for website: ${websiteName}`);
+    const analysisStartTime = Date.now();
+    const analysisResult = await run(businessDataExtractionAgent, [user(businessAnalizerPrompt)], { maxTurns: 3 });
+    const analysisDuration = Date.now() - analysisStartTime;
+    const extractBusinessData = analysisResult.finalOutput || 'Analysis could not be completed';
+    console.log(`[inDepthBusinessAnalysisTool] BusinessDataExtraction agent completed in ${analysisDuration}ms, output length: ${extractBusinessData.length} characters`);
+
+    const promptForZipcodeAnalysis = `
+    Please analyze the area within a 20 mile radius of the business's office location. Your analysis MUST include these four specific strategies:
+
+    1. **"MTV Cribs" (Affluent Homes)**: Identify the top 5-20% of ZIP codes or specific neighborhoods with the highest home values. List specific neighborhood names, median home values, and why these areas are ideal for targeting affluent homeowners.
+
+    2. **"Heavy Movers" (High-Turnover Areas)**: Identify the ZIP codes with the most homes being bought and sold (highest turnover rate). These are areas where homeowners are likely to need services after moving in. Include turnover rates and specific neighborhoods if available.
+
+    3. **"The Sweet Spot" (Older, Valuable Homes)**: Identify areas with older homes (15+ years old) that are still in the top 20% of median home value. These homes often need renovation, maintenance, or upgrades. List specific neighborhoods, average home age, and median values.
+
+    4. **"Neighborhood Reactivation"**: Include this standard paragraph: "Dope Marketing's Neighborhood Reactivation strategy involves mailing postcards to homes surrounding your recently completed jobs. Neighbors who see your crew working are 10x more likely to call. We can launch a targeted campaign around your last 10-50 jobs with no minimums, proof approval, and mail out in under 5 days."
+
+    Be exhaustive and specific in your search for ZIP codes and neighborhoods. Highlight well-known neighborhoods or areas that a local business owner would recognize, so the analysis appears highly knowledgeable about the service area.
+
+    Here is the business's zip code: ${businessZipCode}
+    `
+    // run zipcode analysis
+    console.log(`[inDepthBusinessAnalysisTool] Running MarketAnalyst agent for zip code: ${businessZipCode}`);
+    const zipCodeStartTime = Date.now();
+    const zipCodeAnalysisResult = await run(zipCodeAnalysisAgent, [user(promptForZipcodeAnalysis)], { maxTurns: 3 });
+    const zipCodeDuration = Date.now() - zipCodeStartTime;
+    const zipCodeAnalysis = zipCodeAnalysisResult.finalOutput || 'Analysis could not be completed';
+    console.log(`[inDepthBusinessAnalysisTool] MarketAnalyst agent completed in ${zipCodeDuration}ms, output length: ${zipCodeAnalysis.length} characters`);
+    
+    // run email creation with combined context
+    const emailCreationPrompt = `
+    BUSINESS DATA:
+    ${extractBusinessData}
+
+    MARKET ANALYSIS (INCLUDING 4 KEY STRATEGIES):
+    ${zipCodeAnalysis}
+
+    WHO IS DOPE MARKETING:
+    ${whoIsDopeMarketing}
+
+    DOPE VOICE & STYLE:
+    ${dopeVoice}
+
+    Based on the above business data, market analysis (including MTV Cribs, Heavy Movers, Sweet Spot, and Neighborhood Reactivation strategies), and Dope Marketing's positioning, create 3 tailored outreach email options for this business.
+
+    Each email should:
+    - Reference specific insights from the business research and market analysis
+    - Weave in at least one of the four targeting strategies naturally
+    - Follow Dope Marketing's voice guidelines exactly
+    - Include a clear, reply-based CTA
+    - Feel personalized and data-driven, not generic
+
+    ${primaryContactName ? `- The primary contact name is ${primaryContactName}` : ''}
+    `;
+    
+    console.log(`[inDepthBusinessAnalysisTool] Running EmailCreation agent`);
+    const emailStartTime = Date.now();
+    const emailCreationResult = await run(emailCreationAgent, [user(emailCreationPrompt)], { maxTurns: 1 });
+    const emailDuration = Date.now() - emailStartTime;
+    const emailCreation = emailCreationResult.finalOutput || 'Email creation could not be completed';
+    console.log(`[inDepthBusinessAnalysisTool] EmailCreation agent completed in ${emailDuration}ms, output length: ${emailCreation.length} characters`);
+    
+    // Construct comprehensive analysis output with individual agent outputs
+    const comprehensiveAnalysis = `
+    # 📊 In-Depth Business Analysis Complete
+
+    **Analysis generated by Hermes for ${businessName || 'Client'}**  
+    **Agents Used:** BusinessDataExtraction → MarketAnalyst → EmailCreation  
+    **Generated:** ${new Date().toLocaleString()}
+
+    ---
+
+    ## 🔍 Business Data Extraction Results
+    **Agent:** BusinessDataExtraction  
+    **Status:** ✅ Complete  
+    **Output Length:** ${extractBusinessData.length} characters
+    
+    ${extractBusinessData}
+
+    ---
+
+    ## 📊 Market Analysis Results  
+    **Agent:** MarketAnalyst  
+    **Status:** ✅ Complete  
+    **Output Length:** ${zipCodeAnalysis.length} characters
+    
+    ${zipCodeAnalysis}
+
+    ---
+
+    ## 📧 Email Creation Results
+    **Agent:** EmailCreation  
+    **Status:** ✅ Complete  
+    **Output Length:** ${emailCreation.length} characters
+    
+    ${emailCreation}
+
+    ---
+
+    ## 📋 Executive Summary
+    **Total Analysis Size:** ${(extractBusinessData.length + zipCodeAnalysis.length + emailCreation.length).toLocaleString()} characters  
+    **Agent Pipeline:** 3 agents executed successfully  
+    **Execution Times:** BusinessDataExtraction: ${analysisDuration}ms | MarketAnalyst: ${zipCodeDuration}ms | EmailCreation: ${emailDuration}ms  
+    **Total Processing Time:** ${(analysisDuration + zipCodeDuration + emailDuration)}ms  
+    **Ready for Client Review:** ✅ Yes
+    `;
+    
+    console.log(`[inDepthBusinessAnalysisTool] Analysis complete. Total output length: ${comprehensiveAnalysis.length} characters`);
+    
+    return {
+      success: true,
+      completeAnalysis: comprehensiveAnalysis,
+      businessData: extractBusinessData,
+      marketAnalysis: zipCodeAnalysis,
+      emailOptions: emailCreation,
+      executionMetrics: {
+        businessDataExtraction: {
+          duration: analysisDuration,
+          outputLength: extractBusinessData.length,
+          status: 'completed'
+        },
+        marketAnalysis: {
+          duration: zipCodeDuration,
+          outputLength: zipCodeAnalysis.length,
+          status: 'completed'
+        },
+        emailCreation: {
+          duration: emailDuration,
+          outputLength: emailCreation.length,
+          status: 'completed'
+        },
+        totalDuration: analysisDuration + zipCodeDuration + emailDuration,
+        totalOutputLength: extractBusinessData.length + zipCodeAnalysis.length + emailCreation.length
+      }
+    };
+
+  },
+});
+
 /* ------------------------------------------------------------------------------------------------
 
-REVIEW TOOLS FOR STEVE
-
--------------------------------------------------------------------------------------------------- */ 
+-------------------------------------------------------------------------------------------------- */
 
 const facilitateStandupTool = tool({
   name: 'facilitate_standup',
@@ -388,7 +559,7 @@ const facilitateStandupTool = tool({
   }),
   execute: async (input) => {
     const { teamSize, agenda } = input;
-    
+
     const standupStructure = [
       '# Standup Meeting Structure\n\n',
       '## Standard Format\n',
@@ -403,130 +574,10 @@ const facilitateStandupTool = tool({
       '- Address blockers immediately after standup\n',
       '- Encourage team collaboration and support'
     ];
-    
+
     return standupStructure.join('');
   },
 });
-
-/* ------------------------------------------------------------------------------------------------
-
-REVIEW TOOLS FOR ATLAS
-
--------------------------------------------------------------------------------------------------- */ 
-
-const analyzeWebsiteTool = tool({
-  name: 'analyze_website',
-  description: `Conduct website analysis for business intelligence and competitive insights.
-  
-  If the analysis type is "gather-style-of-speaking", you need to take the results and come up with a master plan for the style of speaking of the website.
-  Think lexicon, tone, stlye, go in depth.
-  This needs to be somehting that is directly useful for an Ai to use to speak like how you notice on the website.
-
-  `,
-  parameters: z.object({
-    websiteUrl: z.string().describe('URL of the website to analyze'),
-    analysisType: z.string().describe('Type of analysis: content, gather-style-of-speaking'),
-  }),
-  execute: async (input) => {
-    const { websiteUrl, analysisType } = input;
-
-    let allScrapedWebsiteInformation = null;
-    let tailoredSummaryOfWebsiteScrape = null;
-    let styleOfSpeaking = null;
-
-    if (analysisType === 'gather-style-of-speaking') {
-
-      /* 
-      ------------------------------------------------------------
-      We want to gather the style of speaking of the website.
-      Because of this, we need to gather more information from the website.
-      Thus, the limit is set to 50.
-      ------------------------------------------------------------
-      */
-      styleOfSpeaking = await analyzeWebsiteViaFirecrawl(websiteUrl, analysisType as 'content' | 'gather-style-of-speaking');
-
-      return {
-        websiteUrl: websiteUrl,
-        analysisType: analysisType,
-        source: styleOfSpeaking?.source,
-        styleOfSpeaking: styleOfSpeaking?.structured,
-      };
-
-    } else {
-
-      allScrapedWebsiteInformation = await analyzeWebsiteViaFirecrawl(websiteUrl, analysisType as 'content' | 'gather-style-of-speaking');
-      tailoredSummaryOfWebsiteScrape = allScrapedWebsiteInformation?.structured
-
-      return {
-        websiteUrl: websiteUrl,
-        analysisType: analysisType,
-        tailoredSummaryOfWebsiteScrape: tailoredSummaryOfWebsiteScrape,
-      };
-      
-    }
-
-  },
-});
-
-const deepResearchTool = tool({
-  name: 'deep_research',
-  description: 'Research ANYTHING - companies, people, topics, industries, trends, technologies, etc. Completely flexible research tool for any query.',
-  parameters: z.object({
-    researchQuery: z.string().describe('What you want to research. Examples: "Tesla competitors", "AI trends 2024", "How does Netflix content strategy work", "Sustainable packaging solutions", "Remote work productivity tools", etc.'),
-    websiteUrl: z.string().optional().nullable().describe('Optional: Include a specific website to focus research on, or null to research the topic generally'),
-  }),
-  execute: async (input) => {
-    const { researchQuery, websiteUrl } = input;
-    return await deepResearchAnything(researchQuery, websiteUrl || undefined);
-  },
-});
-
-
-/* ------------------------------------------------------------------------------------------------
-
-REVIEW TOOLS FOR JUNO
-
--------------------------------------------------------------------------------------------------- */ 
-
-const queryDataTool = tool({
-  name: 'query_data',
-  description: 'Connect to data analytics tools and provide insights',
-  parameters: z.object({
-    dataSource: z.string().describe('The data source or database to query'),
-    queryType: z.string().describe('Type of analysis: performance, trends, comparison'),
-  }),
-  execute: async (input) => {
-    const { dataSource, queryType } = input;
-    
-    // Mock data analysis (would connect to Metabase in production)
-    const dataInsights = [
-      `# Data Analytics Report\n\n`,
-      `**Data Source:** ${dataSource}\n`,
-      `**Query Type:** ${queryType}\n\n`,
-      `## Key Metrics\n`,
-      `- Performance indicators show positive trends\n`,
-      `- Data quality is within acceptable parameters\n`,
-      `- Recent patterns indicate growth opportunities\n\n`,
-      `## Insights\n`,
-      `- Recommendation: Focus on high-performing segments\n`,
-      `- Consider expanding successful strategies\n`,
-      `- Monitor key performance indicators regularly\n\n`,
-      `## Next Steps\n`,
-      `- Set up automated reporting for continuous monitoring\n`,
-      `- Implement data-driven decision making processes\n`,
-      `- Schedule regular analysis reviews`
-    ];
-    
-    return dataInsights.join('');
-  },
-});
-
-/* ------------------------------------------------------------------------------------------------
-
-REVIEW TOOLS FOR DOPE ADMIN
-
--------------------------------------------------------------------------------------------------- */ 
-
 // pinecone tools
 const pineconeListIndexesTool = tool({
   name: 'pinecone_list_indexes',
@@ -536,7 +587,6 @@ const pineconeListIndexesTool = tool({
     return await listIndexesFromPinecone();
   },
 });
-
 const pineconeCreateIndexTool = tool({
   name: 'pinecone_create_index',
   description: 'Create a new Pinecone index',
@@ -760,13 +810,73 @@ const pineconeFaqDataSemanticSearchTool = tool({
   },
 });
 
+// Lookup Dope Active Account by name
+const dopeActiveAccountLookupTool = tool({
+  name: 'dope_active_account_lookup',
+  description: 'Lookup a Dope Active Account by account name and return monthly sends.',
+  parameters: z.object({
+    account_name: z.string().describe('Exact account name to look up, e.g., Coconut Cleaning'),
+  }),
+  execute: async (input) => {
+    const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+    const doc = await convex.query(convexApi.threads.getDopeActiveAccountByName, { account_name: input.account_name });
+    if (!doc) {
+      return { found: false };
+    }
+    return { found: true, account: doc };
+  }
+});
+
+// Add/Update Dope Active Account data
+const dopeActiveAccountUpsertTool = tool({
+  name: 'dope_active_account_upsert',
+  description: 'Add or update a Dope Active Account with monthly send data.',
+  parameters: z.object({
+    account_name: z.string().describe('Account name, e.g., Coconut Cleaning'),
+    account_id: z.string().nullable().optional().describe('Account ID'),
+    hubspot_id: z.string().nullable().optional().describe('HubSpot ID'),
+    industry: z.string().nullable().optional().describe('Industry'),
+    Jan_2025: z.string().nullable().optional().describe('January 2025 sends'),
+    Feb_2025: z.string().nullable().optional().describe('February 2025 sends'),
+    Mar_2025: z.string().nullable().optional().describe('March 2025 sends'),
+    Apr_2025: z.string().nullable().optional().describe('April 2025 sends'),
+    May_2025: z.string().nullable().optional().describe('May 2025 sends'),
+    Jun_2025: z.string().nullable().optional().describe('June 2025 sends'),
+    Jul_2025: z.string().nullable().optional().describe('July 2025 sends'),
+    Aug_2025: z.string().nullable().optional().describe('August 2025 sends'),
+    Sep_2025: z.string().nullable().optional().describe('September 2025 sends'),
+    Oct_2025: z.string().nullable().optional().describe('October 2025 sends'),
+    Nov_2025: z.string().nullable().optional().describe('November 2025 sends'),
+    Dec_2025: z.string().nullable().optional().describe('December 2025 sends'),
+  }),
+  execute: async (input) => {
+    const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+    
+    // Filter out null values to match the mutation schema
+    const filteredInput: any = {
+      account_name: input.account_name
+    };
+    
+    // Add other fields only if they're not null
+    Object.entries(input).forEach(([key, value]) => {
+      if (key !== 'account_name' && value !== null) {
+        filteredInput[key] = value;
+      }
+    });
+    
+    const result = await convex.mutation(convexApi.threads.upsertDopeActiveAccount, { account: filteredInput });
+    return { success: true, id: result };
+  }
+});
+
 
 /* ------------------------------------------------------------------------------------------------
 
 REVIEW AGENTS
 
--------------------------------------------------------------------------------------------------- */ 
+-------------------------------------------------------------------------------------------------- */
 
+/*
 const atlasAgent = new Agent({
   name: 'Atlas',
   instructions: `You are Atlas, a Business Intelligence Agent. You have the ability to conduct website analysis.
@@ -786,7 +896,6 @@ const atlasAgent = new Agent({
   Whatever the user asks, use your tools to your advantage. For other specialized tasks, hand off to the appropriate agent.`,
   handoffDescription: 'Atlas - Business Intelligence Agent - Conducts website analysis.',
   tools: [analyzeWebsiteTool, deepResearchTool],
-  mcpServers: [sequentialThinkingServer],
   model: "gpt-5-mini",
   modelSettings: {
     parallelToolCalls: true,
@@ -797,36 +906,73 @@ const atlasTool = atlasAgent.asTool({
   toolName: 'atlas tool',
   toolDescription: 'Analyze a website for business intelligence.',
 })
+*/
+
+// Consolidated style guide prompt used by Hermes instructions
+const STYLE_GUIDE_PROMPT_HERMES = `You are a smart content formatter. Your job is to improve readability and structure while preserving ALL important information, especially emails, code, and specific data.
+
+FORMATTING RULES:
+- Use clear section headers with relevant emojis: ✅ **Section Name**
+- Use bullet points (-) for lists, indent sub-points with 2 spaces
+- Use tables for structured data with | headers | and --- separators
+- Use code blocks for emails, code, or structured content
+- Use bold (**text**) for emphasis and key terms
+- Add proper spacing between sections and elements
+
+CONTENT PRESERVATION RULES:
+- NEVER modify emails, phone numbers, URLs, or code
+- Keep specific data, numbers, and technical details unchanged
+- Preserve the original meaning and all facts
+
+EMAIL FORMATTING (CRITICAL):
+- NEVER wrap emails in code blocks. Render as normal Markdown text.
+- Separate each email option with clear spacing (double blank lines).
+- Use this structure for each email, each field on its own line with a blank line between sections:
+  **Option X — [Template Name]**
+  
+  **Subject:** [subject line]
+  
+  **Preview:** [preview text]
+  
+  **Body:** [email body content]
+  
+  **Signoff:** [signoff]
+- Do not put multiple emails on a single line; ensure natural paragraph breaks.
+- Use double line breaks between each email option to ensure proper separation.
+
+SMART FORMATTING:
+- If content contains emails, create a "📧 Email Options" section
+- If content has structured data, use tables
+- If content has steps or lists, use bullet points
+- Add relevant emojis to section headers for visual clarity
+- Keep the tone professional but engaging
+- Use proper spacing and line breaks for readability
+
+Use Tables when possible when presenting structured data.
+`;
 
 const hermesAgent = new Agent({
   name: 'Hermes',
-  instructions: `You are Hermes, a Proposal Generator agent for DOPE Marketing. You utilize templates and company information to generate tailored proposals that we can use to sell our services to our clients. 
+  instructions: `You are Hermes, an Account Manager Assistant agent for DOPE Marketing. You have a vast amount of tools that you can use to help the account manager with account management. 
 
     ${whoIsDopeMarketing}
 
-    ${dopeVoice}
+    If you are directed to analyze a business, please use the in_depth_business_analysis tool to analyze the business.
     
-    Your key capabilities include:
-    - Creating proposals based on client needs and company standards
-    - Integrating insights from previous proposals to enhance relevance and effectiveness
-    - Streamlining the proposal creation process for faster turnaround times
-    - Supporting the sales team with high-quality, persuasive proposals tailored to each client's unique requirements
-    - Being helpful overall and being a good agent.
-    
-    - NOTE: if the user explicitly requests a template, use the list_templates tool to find the exact template name and then use the userRequestedTemplateName parameter to pass the template name to the email_creation_by_website_and_template tool.
-    - NOTE: if the user requests about information on DOPE Marketing, use the pinecone_semantic_search tool to search the DOPE Knowledge Base.
-
-    ${howToGenerateAProsal}.
-
-    When users need proposal generation, use sequential thinking first to plan out the task and then follow the steps to generate a proposal. For other specialized tasks, hand off to the appropriate agent.
-
-    Here are the templates we have available just for reference:
-    ${emailTemplates.map(template => `- ${template.name}: ${template.description}`).join('\n')}
-
+    CRITICAL: When using the in_depth_business_analysis tool, do NOT summarize, condense, or reformat the agent outputs. Return them exactly as they are produced. Do not add your own commentary, explanations, or formatting. The tool will return the raw agent outputs and you should present them as-is.
+  
+  
+  FORMATTING RULES (APPLY THESE WHEN WRITING RESPONSES):
+  ${STYLE_GUIDE_PROMPT_HERMES}
   `,
-  handoffDescription: 'Hermes - Proposal Generator - Creates tailored proposals based on client needs and company standards.',
-  tools: [listTemplatesTool, emailCreationByWebsiteAndTemplateTool, listHowToGenerateAProsal, pineconeCompanyKnowledgeSemanticSearchTool, pineconeEmailTemplatesSemanticSearchTool, pineconeTranscriptDataSemanticSearchTool, pineconeFaqDataSemanticSearchTool],
-  mcpServers: [sequentialThinkingServer],
+  handoffDescription: 'Hermes - Account Manager Assistant - Uses tools to help the account manager with account management.',
+  tools: [listTemplatesTool, 
+    inDepthBusinessAnalysisTool, dopeActiveAccountLookupTool, dopeActiveAccountUpsertTool,
+    listHowToGenerateAProsal, 
+    pineconeCompanyKnowledgeSemanticSearchTool, 
+    pineconeEmailTemplatesSemanticSearchTool, 
+    pineconeTranscriptDataSemanticSearchTool, 
+    pineconeFaqDataSemanticSearchTool, webSearchTool()],
   model: "gpt-5-mini",
   modelSettings: {
     parallelToolCalls: true,
@@ -852,27 +998,7 @@ const steveAgent = new Agent({
     - Ask engaging follow-up questions
   `,
   handoffDescription: 'Steve - Leadership Agent - Enhances team collaboration and development using CliftonStrengths and employee profiles.',
-  tools: [atlasTool, facilitateStandupTool, pineconeAddTranscriptDataToIndexTool, pineconeCompanyKnowledgeSemanticSearchTool, pineconeEmployeeDataSemanticSearchTool, pineconeTranscriptDataSemanticSearchTool, webSearchTool()],
-  mcpServers: [sequentialThinkingServer],
-  model: "gpt-5-mini",
-  modelSettings: {
-    parallelToolCalls: true,
-  }
-});
-
-const junoAgent = new Agent({
-  name: 'Juno',
-  instructions: `You are Juno, a Data Integration Agent. You connect to data analytics tools like Metabase to provide comprehensive data analytics capabilities.
-
-  Your key capabilities include:
-  - Centralizing data access to eliminate the need for multiple tools, improving effectiveness
-  - Providing insights derived from data analytics to support decision-making processes
-  - Currently undergoing testing to ensure seamless connectivity and functionality
-  
-  When users need data analytics, insights, or database queries, use your tools to provide comprehensive analysis. For other specialized tasks, hand off to the appropriate agent.`,
-  handoffDescription: 'Juno - Data Integration Agent - Connects to Metabase and other tools for comprehensive data analytics.',
-  tools: [queryDataTool, webSearchTool()],
-  mcpServers: [sequentialThinkingServer],
+  tools: [facilitateStandupTool, pineconeAddTranscriptDataToIndexTool, pineconeCompanyKnowledgeSemanticSearchTool, pineconeEmployeeDataSemanticSearchTool, pineconeTranscriptDataSemanticSearchTool, webSearchTool()],
   model: "gpt-5-mini",
   modelSettings: {
     parallelToolCalls: true,
@@ -885,18 +1011,71 @@ const dopeAdminAgent = new Agent({
   `,
   handoffDescription: 'Dope Admin - Dope Marketing Admin Agent - Helps the engineer complete any tasks and is helpful overall.',
   tools: [webSearchTool(), pineconeListIndexesTool, pineconeCreateIndexTool, pineconeAddToIndexTool, pineconeAddEmployeeDataToIndexTool, pineconeAddTranscriptDataToIndexTool, pineconeSemanticSearchTool],
-  mcpServers: [sequentialThinkingServer],
   model: "gpt-5-mini",
   modelSettings: {
     parallelToolCalls: true,
   }
 });
 
-// Set up handoffs between agents
-hermesAgent.handoffs = [steveAgent, atlasAgent, junoAgent];
-steveAgent.handoffs = [hermesAgent, atlasAgent, junoAgent];
-atlasAgent.handoffs = [hermesAgent, steveAgent, junoAgent];
-junoAgent.handoffs = [hermesAgent, steveAgent, atlasAgent];
+// ------------------------------------------------------------------------------------------------
+
+const STYLE_GUIDE_PROMPT = `You are a smart content formatter. Your job is to improve readability and structure while preserving ALL important information, especially emails, code, and specific data.
+
+FORMATTING RULES:
+- Use clear section headers with relevant emojis: ✅ **Section Name**
+- Use bullet points (-) for lists, indent sub-points with 2 spaces
+- Use tables for structured data with | headers | and --- separators
+- Use code blocks for emails, code, or structured content
+- Use bold (**text**) for emphasis and key terms
+- Add proper spacing between sections and elements
+
+CONTENT PRESERVATION RULES:
+- NEVER modify emails, phone numbers, URLs, or code
+- Keep specific data, numbers, and technical details unchanged
+- Preserve the original meaning and all facts
+
+EMAIL FORMATTING (CRITICAL):
+- NEVER wrap emails in code blocks. Render as normal Markdown text.
+- Separate each email option with clear spacing (double blank lines).
+- Use this structure for each email, each field on its own line with a blank line between sections:
+  **Option X — [Template Name]**
+  
+  **Subject:** [subject line]
+  
+  **Preview:** [preview text]
+  
+  **Body:** [email body content]
+  
+  **Signoff:** [signoff]
+- Do not put multiple emails on a single line; ensure natural paragraph breaks.
+- Use double line breaks between each email option to ensure proper separation.
+
+SMART FORMATTING:
+- If content contains emails, create a "📧 Email Options" section
+- If content has structured data, use tables
+- If content has steps or lists, use bullet points
+- Add relevant emojis to section headers for visual clarity
+- Keep the tone professional but engaging
+- Use proper spacing and line breaks for readability
+
+ZIP CODE ANALYSIS CTA (CRITICAL):
+- If the response mentions a business with a location, address, or ZIP code, ALWAYS end with:
+  "📍 **ZIP Code Analysis Available**
+  
+  Would you like me to perform an in-depth ZIP code analysis for [ZIP CODE or area]? I can provide demographic insights, market data, and service area recommendations."
+- Extract the ZIP code from addresses like "123 Main St, City, ST 12345" or similar patterns
+- If no explicit ZIP code but a city/state is mentioned, use "the [City, State] area" instead
+
+Return only the formatted content. Do not add commentary or explanations.`;
+
+// const formatterAgent = new Agent({
+//   name: 'Formatter',
+//   instructions: STYLE_GUIDE_PROMPT,
+//   handoffDescription: 'Formats assistant content into the desired Markdown style without changing meaning.',
+//   tools: [],
+//   model: 'gpt-5-mini',
+//   modelSettings: { parallelToolCalls: false }
+// });
 
 
 // Request/Response schemas
@@ -905,6 +1084,7 @@ const ChatRequestSchema = z.object({
   threadId: z.string().nullable().optional(),
   agentId: z.string().optional(),
   userId: z.string().optional(),
+  userName: z.string().optional(),
 });
 
 const ChatResponseSchema = z.object({
@@ -919,12 +1099,19 @@ const ChatResponseSchema = z.object({
     arguments: z.any(),
     result: z.any().optional(),
   })).optional(),
+  agentHandoffs: z.array(z.object({
+    from: z.string(),
+    to: z.string(),
+    timestamp: z.number(),
+  })).optional(),
 });
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { message, threadId, agentId, userId } = ChatRequestSchema.parse(body);
+    const { message, threadId, agentId, userId, userName } = ChatRequestSchema.parse(body);
+
+    console.log('[Chat API] Received request with user info:', { userId, userName, threadId });
 
     // Initialize Convex client
     const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
@@ -935,10 +1122,6 @@ export async function POST(request: NextRequest) {
       currentAgent = hermesAgent;
     } else if (agentId === 'steve') {
       currentAgent = steveAgent;
-    } else if (agentId === 'atlas') {
-      currentAgent = atlasAgent;
-    } else if (agentId === 'juno') {
-      currentAgent = junoAgent;
     } else if (agentId === 'dope-admin') {
       currentAgent = dopeAdminAgent;
     }
@@ -946,11 +1129,11 @@ export async function POST(request: NextRequest) {
     // Get or create thread - SIMPLE VERSION
     let savedMessages: any[] = [];
     let currentThreadId = threadId || null;
-    
+
     if (currentThreadId) {
       // Load existing thread
-      const existingThread = await convex.query(api.threads.getThread, { 
-        threadId: currentThreadId 
+      const existingThread = await convex.query(api.threads.getThread, {
+        threadId: currentThreadId
       });
       if (existingThread) {
         savedMessages = existingThread.history || [];
@@ -962,7 +1145,7 @@ export async function POST(request: NextRequest) {
 
     // Build proper conversation thread with history for context
     const conversationThread: AgentInputItem[] = [];
-    
+
     // Add previous messages from history
     for (const msg of savedMessages) {
       if (msg.role === 'user') {
@@ -975,41 +1158,52 @@ export async function POST(request: NextRequest) {
         });
       }
     }
-    
+
     // Add the new user message
     conversationThread.push(user(message));
 
-    // Connect MCP server, run, then close
-    await sequentialThinkingServer.connect();
-
+    // Run the chat session
     const result = await withTrace('Chat Session', async () => {
       return await run(currentAgent, conversationThread, {
         maxTurns: 20, // Limit turns to prevent infinite loops
       });
     });
-    
-    await sequentialThinkingServer.close();
 
     // Extract tool calls from the result history
-    const toolCalls: Array<{name: string, arguments: any, result?: any}> = [];
+    const toolCalls: Array<{ name: string, arguments: any, result?: any }> = [];
+    let agentHandoffs: Array<{ from: string, to: string, timestamp: number }> = [];
+    
     if (result.history) {
       const callResults = new Map();
-      
+
       // First pass: collect function call results
       for (const item of result.history) {
         if (item.type === 'function_call_result') {
           callResults.set(item.callId, item.output);
         }
       }
-      
+
       // Second pass: collect function calls and match with results
       for (const item of result.history) {
         if (item.type === 'function_call') {
-          toolCalls.push({
+          const toolCall = {
             name: item.name,
             arguments: typeof item.arguments === 'string' ? JSON.parse(item.arguments) : item.arguments,
             result: callResults.get(item.callId)
-          });
+          };
+          
+          toolCalls.push(toolCall);
+          
+          // Detect agent handoffs based on tool name or result
+          if (item.name.includes('handoff') || item.name.includes('delegate') || 
+              (toolCall.result && typeof toolCall.result === 'object' && 
+               (toolCall.result.agentName || toolCall.result.handoffTo))) {
+            agentHandoffs.push({
+              from: result.lastAgent?.name || currentAgent.name,
+              to: toolCall.result?.agentName || toolCall.result?.handoffTo || 'Unknown Agent',
+              timestamp: Date.now()
+            });
+          }
         }
         // Handle hosted tool calls (like web search)
         else if (item.type === 'hosted_tool_call') {
@@ -1022,7 +1216,104 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create simple message history for saving
+    // Formatting agent disabled; rely on Hermes instructions' formatting rules
+    let finalOutput: string = result.finalOutput || 'No response generated';
+
+    // If the in_depth_business_analysis tool was used and returned a completeAnalysis,
+    // immediately append it as the next assistant message in the thread without changing
+    // the primary response payload.
+    let comprehensiveAnalysisContent: string | null = null;
+    try {
+      const analysisCall = toolCalls.find((tc) => tc.name === 'in_depth_business_analysis');
+      if (analysisCall && analysisCall.result && typeof analysisCall.result.completeAnalysis === 'string') {
+        comprehensiveAnalysisContent = analysisCall.result.completeAnalysis as string;
+      }
+    } catch (_) {
+      // noop — do not affect normal flow if parsing fails
+    }
+
+    // Convert tool call results into assistant messages to appear above the final reply
+    const toolResultMessages = toolCalls
+      .flatMap(tc => {
+        const resultContent = tc?.result;
+        const messages: Array<{ role: 'assistant'; content: string; timestamp: number; agentName: string }> = [];
+        
+        if (typeof resultContent === 'string') {
+          messages.push({
+            role: 'assistant',
+            content: resultContent,
+            timestamp: Date.now(),
+            agentName: tc.name || result.lastAgent?.name || currentAgent.name,
+          });
+        } else if (resultContent && typeof resultContent === 'object') {
+          // Handle inDepthBusinessAnalysisTool - create separate messages for each agent output
+          if (tc.name === 'in_depth_business_analysis') {
+            // First, show the comprehensive analysis as the main result
+            if (resultContent.completeAnalysis) {
+              messages.push({
+                role: 'assistant',
+                content: `🎯 **Complete Business Analysis Pipeline**\n\n${resultContent.completeAnalysis}`,
+                timestamp: Date.now(),
+                agentName: 'Hermes',
+              });
+            }
+            
+            // Then show individual agent outputs for detailed review
+            if (resultContent.businessData) {
+              messages.push({
+                role: 'assistant',
+                content: `🔍 **Business Data Extraction Results**\n\n**Agent:** BusinessDataExtraction\n**Status:** ✅ Complete\n**Task:** Website research and business data extraction\n\n${resultContent.businessData}`,
+                timestamp: Date.now(),
+                agentName: 'BusinessDataExtraction',
+              });
+            }
+            if (resultContent.marketAnalysis) {
+              messages.push({
+                role: 'assistant',
+                content: `📊 **Market Analysis Results**\n\n**Agent:** MarketAnalyst\n**Status:** ✅ Complete\n**Task:** ZIP code demographic analysis and market insights\n\n${resultContent.marketAnalysis}`,
+                timestamp: Date.now(),
+                agentName: 'MarketAnalyst',
+              });
+            }
+            if (resultContent.emailOptions) {
+              messages.push({
+                role: 'assistant',
+                content: `📧 **Email Creation Results**\n\n**Agent:** EmailCreation\n**Status:** ✅ Complete\n**Task:** Generate tailored outreach email options\n\n${resultContent.emailOptions}`,
+                timestamp: Date.now(),
+                agentName: 'EmailCreation',
+              });
+            }
+          } else {
+            // Handle other tool results
+            let content: string | null = null;
+            if (typeof (resultContent as any).completeAnalysis === 'string') {
+              content = (resultContent as any).completeAnalysis;
+            } else if (typeof (resultContent as any).text === 'string') {
+              content = (resultContent as any).text;
+            } else if (typeof (resultContent as any).output === 'string') {
+              content = (resultContent as any).output;
+            } else {
+              try {
+                content = JSON.stringify(resultContent, null, 2);
+              } catch {
+                content = String(resultContent);
+              }
+            }
+            if (content) {
+              messages.push({
+                role: 'assistant',
+                content,
+                timestamp: Date.now(),
+                agentName: tc.name || result.lastAgent?.name || currentAgent.name,
+              });
+            }
+          }
+        }
+        return messages;
+      });
+
+    // Create simple message history for saving (with formatted content).
+    // Order: prior history -> user -> tool results -> final assistant -> optional comprehensive analysis
     const messagesToSave = [
       ...savedMessages,
       {
@@ -1031,32 +1322,56 @@ export async function POST(request: NextRequest) {
         timestamp: Date.now(),
         agentName: 'user'
       },
+      ...toolResultMessages,
       {
-        role: 'assistant', 
-        content: result.finalOutput || 'No response generated',
+        role: 'assistant',
+        content: finalOutput,
         timestamp: Date.now(),
         agentName: result.lastAgent?.name || currentAgent.name,
         toolCalls: toolCalls.length > 0 ? toolCalls : undefined
-      }
+      },
+      // Append comprehensive analysis as its own assistant message if present
+      ...(comprehensiveAnalysisContent ? [{
+        role: 'assistant' as const,
+        content: comprehensiveAnalysisContent,
+        timestamp: Date.now(),
+        agentName: result.lastAgent?.name || currentAgent.name,
+      }] : [])
     ];
 
-    // Save to Convex - SIMPLE VERSION
+    // Save to Convex - generate/set title automatically
     if (currentThreadId) {
       if (savedMessages.length === 0) {
-        // Create new thread
+        // Create new thread with a temporary title
+        console.log('[Chat API] Creating new thread with:', { threadId: currentThreadId, userId, userName });
         await convex.mutation(api.threads.createThread, {
           threadId: currentThreadId,
           userId: userId,
+          userName: userName,
           agentId: result.lastAgent?.name.toLowerCase().replace(/\s+/g, '-') || agentId || 'hermes',
           title: "New Chat",
           history: messagesToSave,
         });
+
+        // Generate a better title from the latest user message (last 100 chars)
+        const latestUserMessage = message.slice(-100);
+        try {
+          const titleGen = await run(titleGeneratorAgent, [user(`Title for: ${latestUserMessage}`)], { maxTurns: 1 });
+          const generatedTitle = (titleGen.finalOutput || '').trim();
+          if (generatedTitle) {
+            await convex.mutation(api.threads.updateThreadTitle, {
+              threadId: currentThreadId,
+              title: generatedTitle,
+            });
+          }
+        } catch (e) {
+          console.warn('Title generation failed, keeping default title');
+        }
       } else {
-        // Update existing thread
+        // Update existing thread without overwriting title
         await convex.mutation(api.threads.updateThread, {
           threadId: currentThreadId,
           agentId: result.lastAgent?.name.toLowerCase().replace(/\s+/g, '-') || agentId,
-          title: "Chat", // Keep it simple
           history: messagesToSave,
         });
       }
@@ -1064,19 +1379,20 @@ export async function POST(request: NextRequest) {
 
     const response = ChatResponseSchema.parse({
       success: true,
-      message: result.finalOutput || 'No response generated',
+      message: finalOutput,
       agentName: result.lastAgent?.name || currentAgent.name,
       history: messagesToSave,
       threadId: currentThreadId,
       lastAgentId: result.lastAgent?.name.toLowerCase().replace(/\s+/g, '-') || agentId,
       toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+      agentHandoffs: agentHandoffs.length > 0 ? agentHandoffs : undefined,
     });
 
     return NextResponse.json(response);
 
   } catch (error) {
     console.error('Chat API error:', error);
-    
+
     return NextResponse.json(
       {
         success: false,
@@ -1097,48 +1413,92 @@ export async function GET() {
       {
         id: 'hermes',
         name: 'Hermes',
-        description: 'Proposal Generator - Utilizes templates and company information to generate tailored proposals',
-        capabilities: ['web-search', 'proposal-generation', 'client-analysis', 'sales-support'],
-        tools: ['list_templates', 'email_creation_by_website_and_template', 'list_how_to_generate_a_proposal', 'pinecone_company_knowledge_semantic_search', 'pinecone_email_templates_semantic_search', 'pinecone_faq_data_semantic_search'],
+        description: 'Account Manager Assistant - Utilizes templates and company information to generate tailored proposals, analyze markets, and support account management',
+        capabilities: ['web-search', 'proposal-generation', 'client-analysis', 'sales-support', 'market-analysis', 'demographic-insights'],
+        tools: [
+          'web_search',
+          //'list_templates', 
+          'in_depth_business_analysis', 
+          'pinecone_company_knowledge_semantic_search', 
+          //'pinecone_email_templates_semantic_search', 
+          'pinecone_transcript_data_semantic_search', 
+          //'pinecone_faq_data_semantic_search', 
+        ],
       },
       {
         id: 'steve',
         name: 'Steve',
         description: 'Leadership Agent - Leverages CliftonStrengths and employee profiles for team development',
         capabilities: ['web-search', 'team-collaboration', 'standup-facilitation', 'performance-improvement'],
-        tools: ['pinecone_add_transcript_data_to_index', 'pinecone_company_knowledge_semantic_search', 'pinecone_employee_data_semantic_search', 'pinecone_transcript_data_semantic_search', 'web_search'],
-      },
-      {
-        id: 'atlas',
-        name: 'Atlas',
-        description: 'Business Intelligence Agent - Conducts website analysis.',
-        capabilities: ['web-search', 'website-analysis', 'competitive-intelligence', 'strategic-recommendations'],
-        tools: ['analyze_website', 'deep_research'],
-      },
-      {
-        id: 'juno',
-        name: 'Juno',
-        description: 'Data Integration Agent - Connects to Metabase for comprehensive data analytics',
-        capabilities: ['web-search', 'data-analytics', 'metabase-integration', 'decision-support'],
-        tools: ['web_search'],
+        tools: [
+          'web_search',
+//          'facilitate_standup', 
+          'pinecone_add_transcript_data_to_index', 
+          'pinecone_company_knowledge_semantic_search', 
+          'pinecone_employee_data_semantic_search', 
+          'pinecone_transcript_data_semantic_search', 
+        ],
       },
       {
         id: 'dope-admin',
         name: 'Dope Admin',
         description: 'Dope Marketing Admin Agent - Helps the engineer complete any tasks and is helpful overall.',
         capabilities: ['web-search', 'admin-support'],
-        tools: ['web_search', 'pinecone_list_indexes', 'pinecone_create_index', 'pinecone_add_to_index', 'pinecone_add_employee_data_to_index', 'pinecone_add_transcript_data_to_index', 'pinecone_semantic_search'],
+        tools: [
+          'web_search', 
+          'dope_active_account_lookup', 
+          'dope_active_account_upsert', 
+          'pinecone_list_indexes', 
+          'pinecone_create_index', 
+          'pinecone_add_to_index', 
+          'pinecone_add_employee_data_to_index', 
+          'pinecone_add_transcript_data_to_index', 
+          'pinecone_semantic_search'
+        ],
       },
     ];
 
     return NextResponse.json({
       success: true,
       data: agents,
+      toolDisplayNames: TOOL_DISPLAY_NAMES,
     });
+
   } catch (error) {
     console.error('Error fetching chat agents:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch agents' },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT endpoint to generate a new title for a thread
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { threadId, messageContent } = body;
+
+    if (!threadId || !messageContent) {
+      return NextResponse.json(
+        { success: false, error: 'Thread ID and message content are required' },
+        { status: 400 }
+      );
+    }
+
+    // Generate title using the title generator agent
+    const titleResult = await run(titleGeneratorAgent, [user(`Generate a title for this conversation: ${messageContent}`)], { maxTurns: 1 });
+    const generatedTitle = (titleResult.finalOutput || '').trim() || 'New Chat';
+
+    return NextResponse.json({
+      success: true,
+      title: generatedTitle,
+    });
+
+  } catch (error) {
+    console.error('Title generation error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to generate title' },
       { status: 500 }
     );
   }

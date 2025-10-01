@@ -14,6 +14,11 @@ interface ChatMessage {
     arguments: any;
     result?: any;
   }>;
+  agentHandoffs?: Array<{
+    from: string;
+    to: string;
+    timestamp: number;
+  }>;
 }
 
 interface ConversationThread {
@@ -37,7 +42,7 @@ interface AgentChatContextType {
   threads: ConversationThread[];
   currentThreadId: string | null;
   setCurrentThreadId: (threadId: string | null) => void;
-  loadThreads: (userId?: string) => Promise<void>;
+  loadThreads: (userId?: string, userName?: string) => Promise<void>;
   createNewThread: () => void;
   selectThread: (threadId: string) => Promise<void>;
   deleteThread: (threadId: string) => Promise<void>;
@@ -64,11 +69,13 @@ export const useAgentChat = () => {
 interface AgentChatProviderProps {
   children: React.ReactNode;
   userId?: string;
+  userName?: string;
 }
 
 export const AgentChatProvider: React.FC<AgentChatProviderProps> = ({ 
   children, 
-  userId 
+  userId,
+  userName
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [threads, setThreads] = useState<ConversationThread[]>([]);
@@ -80,14 +87,20 @@ export const AgentChatProvider: React.FC<AgentChatProviderProps> = ({
   const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
   // Load threads for user - no callback needed
-  const loadThreads = async (userId?: string) => {
-    if (!userId) return;
+  const loadThreads = async (userId?: string, userName?: string) => {
+    console.log('[AgentChatProvider] loadThreads called with:', { userId, userName });
+    if (!userId && !userName) {
+      console.log('[AgentChatProvider] No userId or userName provided, skipping thread load');
+      return;
+    }
     
     try {
-      const userThreads = await convex.query(api.threads.getUserThreads, { userId });
+      console.log('[AgentChatProvider] Fetching threads...');
+      const userThreads = await convex.query(api.threads.getUserThreads, { userId, userName });
+      console.log('[AgentChatProvider] Received threads:', userThreads.length);
       setThreads(userThreads);
     } catch (error) {
-      console.error('Error loading threads:', error);
+      console.error('[AgentChatProvider] Error loading threads:', error);
     }
   };
 
@@ -143,10 +156,7 @@ export const AgentChatProvider: React.FC<AgentChatProviderProps> = ({
         setMessages([]);
       }
       
-      // Reload threads to ensure consistency
-      if (userId) {
-        loadThreads(userId);
-      }
+      // Reload threads to ensure consistency (will be handled by useEffect)
     } catch (error) {
       console.error('Error deleting thread:', error);
     }
@@ -154,17 +164,22 @@ export const AgentChatProvider: React.FC<AgentChatProviderProps> = ({
 
   // Load threads on mount
   useEffect(() => {
-    if (userId) {
-      loadThreads(userId);
+    if (userId || userName) {
+      loadThreads(userId, userName);
+    } else {
+      // User logged out or not available: clear selection and data
+      setCurrentThreadId(null);
+      setMessages([]);
+      setThreads([]);
     }
-  }, [userId]);
+  }, [userId, userName]);
 
   // Refresh threads when current thread is updated
   useEffect(() => {
-    if (userId && currentThreadId) {
-      loadThreads(userId);
+    if ((userId || userName) && currentThreadId) {
+      loadThreads(userId, userName);
     }
-  }, [currentThreadId, userId]);
+  }, [currentThreadId, userId, userName]);
 
   const value: AgentChatContextType = {
     messages,

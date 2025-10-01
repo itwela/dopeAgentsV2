@@ -21,21 +21,77 @@ interface AgentInfoModalProps {
 }
 
 const toolIcons: { [key: string]: any } = {
-  "Database": Database,
-  "Analytics": BarChart3,
-  "User Management": Users,
-  "File Processing": FileText,
-  "Web Search": Globe,
-  "Search": Search,
-  "AI Processing": Brain,
-  "Targeting": Target,
-  "Trends": TrendingUp,
-  "Messaging": MessageSquare,
-  "Insights": Lightbulb,
-  "Security": Shield,
-  "Computing": Cpu,
-  "Monitoring": Activity,
+  "database": Database,
+  "analytics": BarChart3,
+  "user": Users,
+  "file": FileText,
+  "web": Globe,
+  "search": Search,
+  "brain": Brain,
+  "target": Target,
+  "trend": TrendingUp,
+  "message": MessageSquare,
+  "insight": Lightbulb,
+  "security": Shield,
+  "cpu": Cpu,
+  "activity": Activity,
 };
+
+// Tool display names mapping for cleaner user interface
+const TOOL_DISPLAY_NAMES: Record<string, string> = {
+  // Email & Proposal Tools
+  'list_templates': '📧 Email Templates',
+  'list_how_to_generate_a_proposal': '📋 Proposal Guide',
+  'in_depth_business_analysis': '🔍 Business Analysis',
+  
+  // Leadership & Team Tools
+  'facilitate_standup': '👥 Standup Meetings',
+  
+  // Pinecone Database Tools
+  'pinecone_list_indexes': '🗂️ List Indexes',
+  'pinecone_create_index': '➕ Create Index',
+  'pinecone_add_to_index': '📝 Add Data',
+  'pinecone_add_employee_data_to_index': '👤 Add Employee Data',
+  'pinecone_add_transcript_data_to_index': '📄 Add Transcript',
+  'pinecone_semantic_search': '🔎 Semantic Search',
+  
+  // Specialized Pinecone Searches
+  'pinecone_company_knowledge_semantic_search': '🏢 Company Knowledge',
+  'pinecone_employee_data_semantic_search': '👥 Employee Profiles',
+  'pinecone_transcript_data_semantic_search': '📝 Transcript Search',
+  'pinecone_email_templates_semantic_search': '📧 Email Templates Search',
+  'pinecone_faq_data_semantic_search': '❓ FAQ Search',
+  
+  // Account Management
+  'dope_active_account_lookup': '📊 Account Lookup',
+  
+  // Web Tools
+  'web_search': '🌐 Web Search'
+};
+
+// Format tool names to be more readable
+function formatToolName(toolName: string): string {
+  return TOOL_DISPLAY_NAMES[toolName] || toolName
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+// Get icon based on tool name keywords
+function getToolIcon(toolName: string) {
+  const lowerName = toolName.toLowerCase();
+  
+  if (lowerName.includes('search') || lowerName.includes('semantic')) return Search;
+  if (lowerName.includes('web')) return Globe;
+  if (lowerName.includes('email') || lowerName.includes('template')) return MessageSquare;
+  if (lowerName.includes('knowledge') || lowerName.includes('pinecone')) return Database;
+  if (lowerName.includes('employee') || lowerName.includes('transcript')) return Users;
+  if (lowerName.includes('list') || lowerName.includes('faq')) return FileText;
+  if (lowerName.includes('analysis') || lowerName.includes('zip')) return BarChart3;
+  if (lowerName.includes('proposal') || lowerName.includes('generate')) return Lightbulb;
+  
+  return Brain;
+}
 
 export function AgentInfoModal({ isOpen, onClose, currentAgent, availableAgents }: AgentInfoModalProps) {
   const currentAgentInfo = availableAgents.find(agent => agent.id === currentAgent);
@@ -73,12 +129,12 @@ export function AgentInfoModal({ isOpen, onClose, currentAgent, availableAgents 
 
                 {/* Capabilities */}
                 {currentAgentInfo.capabilities && currentAgentInfo.capabilities.length > 0 && (
-                  <div>
-                    <h4 className="text-lg font-semibold mb-3 text-foreground">Capabilities</h4>
+                  <div className="mt-6">
+                    <h4 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Capabilities</h4>
                     <div className="flex flex-wrap gap-2">
                       {currentAgentInfo.capabilities.map((capability) => (
-                        <Badge key={capability} variant="secondary" className="text-sm px-3 py-1">
-                          {capability}
+                        <Badge key={capability} variant="secondary" className="text-sm px-3 py-1.5 font-medium">
+                          {formatToolName(capability)}
                         </Badge>
                       ))}
                     </div>
@@ -87,15 +143,17 @@ export function AgentInfoModal({ isOpen, onClose, currentAgent, availableAgents 
 
                 {/* Tools */}
                 {currentAgentInfo.tools && currentAgentInfo.tools.length > 0 && (
-                  <div>
-                    <h4 className="text-lg font-semibold mb-3 text-foreground">Available Tools</h4>
-                    <div className="grid grid-cols-1 gap-3">
+                  <div className="mt-6">
+                    <h4 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Available Tools</h4>
+                    <div className="grid grid-cols-1 gap-2">
                       {currentAgentInfo.tools.map((tool) => {
-                        const IconComponent = toolIcons[tool] || Brain;
+                        const IconComponent = getToolIcon(tool);
                         return (
-                          <div key={tool} className="flex items-center gap-3 p-3 rounded-lg bg-white/50 dark:bg-gray-800/50 border">
-                            <IconComponent className="h-5 w-5 text-blue-600" />
-                            <span className="text-sm font-medium">{tool}</span>
+                          <div key={tool} className="flex items-center gap-3 p-3 rounded-lg bg-white/70 dark:bg-gray-800/70 border border-border/50 hover:border-primary/50 transition-colors">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+                              <IconComponent className="h-4 w-4 text-primary" />
+                            </div>
+                            <span className="text-sm font-medium text-foreground">{formatToolName(tool)}</span>
                           </div>
                         );
                       })}
@@ -129,15 +187,15 @@ export function AgentInfoModal({ isOpen, onClose, currentAgent, availableAgents 
                   {/* Agent Capabilities */}
                   {agent.capabilities && agent.capabilities.length > 0 && (
                     <div>
-                      <h6 className="text-sm font-medium mb-2 text-muted-foreground">Capabilities</h6>
+                      <h6 className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wide">Capabilities</h6>
                       <div className="flex flex-wrap gap-2">
                         {agent.capabilities.slice(0, 6).map((capability) => (
-                          <Badge key={capability} variant="outline" className="text-xs">
-                            {capability}
+                          <Badge key={capability} variant="outline" className="text-xs px-2 py-0.5">
+                            {formatToolName(capability)}
                           </Badge>
                         ))}
                         {agent.capabilities.length > 6 && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs px-2 py-0.5">
                             +{agent.capabilities.length - 6} more
                           </Badge>
                         )}
@@ -148,20 +206,22 @@ export function AgentInfoModal({ isOpen, onClose, currentAgent, availableAgents 
                   {/* Agent Tools */}
                   {agent.tools && agent.tools.length > 0 && (
                     <div>
-                      <h6 className="text-sm font-medium mb-2 text-muted-foreground">Tools</h6>
+                      <h6 className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wide">Tools ({agent.tools.length})</h6>
                       <div className="flex flex-wrap gap-2">
                         {agent.tools.slice(0, 8).map((tool) => {
-                          const IconComponent = toolIcons[tool] || Brain;
+                          const IconComponent = getToolIcon(tool);
                           return (
-                            <div key={tool} className="flex items-center gap-2 px-3 py-1 rounded-md bg-muted/50">
-                              <IconComponent className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-xs">{tool}</span>
+                            <div key={tool} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-muted/50 border border-border/30 hover:bg-muted/70 transition-colors">
+                              <div className="flex h-4 w-4 items-center justify-center">
+                                <IconComponent className="h-3.5 w-3.5 text-muted-foreground" />
+                              </div>
+                              <span className="text-xs font-medium">{formatToolName(tool)}</span>
                             </div>
                           );
                         })}
                         {agent.tools.length > 8 && (
-                          <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-muted/50">
-                            <span className="text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-muted/30 border border-dashed border-border/50">
+                            <span className="text-xs text-muted-foreground font-medium">
                               +{agent.tools.length - 8} more
                             </span>
                           </div>
