@@ -318,31 +318,31 @@ TOOL KEY-PAIR MAPPINGS
 // Tool display names mapping for cleaner user interface
 const TOOL_DISPLAY_NAMES = {
   // Email & Proposal Tools
-  'list_templates': '📧 Email Templates',
+  'list_templates': '📧 Templates',
   'list_how_to_generate_a_proposal': '📋 Proposal Guide',
   'in_depth_business_analysis': '🔍 Business Analysis',
   
   // Leadership & Team Tools
-  'facilitate_standup': '👥 Standup Meetings',
+  'facilitate_standup': '👥 Standup',
   
   // Pinecone Database Tools
-  'pinecone_list_indexes': '🗂️ DOPE List Indexes',
-  'pinecone_create_index': '➕ DOPE Create Index',
-  'pinecone_add_to_index': '📝 DOPE Add Data',
-  'pinecone_add_employee_data_to_index': '👤 DOPE Add Employee Data',
-  'pinecone_add_transcript_data_to_index': '📄 DOPE Add Transcript',
-  'pinecone_semantic_search': '🔎 DOPE Semantic Search',
+  'pinecone_list_indexes': '🗂️ List Indexes',
+  'pinecone_create_index': '➕ Create Index',
+  'pinecone_add_to_index': '📝 Add Data',
+  'pinecone_add_employee_data_to_index': '👤 Add Employee',
+  'pinecone_add_transcript_data_to_index': '📄 Add Transcript',
+  'pinecone_semantic_search': '🔎 Search',
   
   // Specialized Pinecone Searches
-  'pinecone_company_knowledge_semantic_search': '🏢 DOPE Company Knowledge',
-  'pinecone_employee_data_semantic_search': '👥 DOPE Employee Profiles',
-  'pinecone_transcript_data_semantic_search': '📝 DOPE Transcript Search',
-  'pinecone_email_templates_semantic_search': '📧 DOPE Email Templates Search',
-  'pinecone_faq_data_semantic_search': '❓ DOPE FAQ Search',
+  'pinecone_company_knowledge_semantic_search': '🏢 Company Knowledge',
+  'pinecone_employee_data_semantic_search': '👥 Employee Profiles',
+  'pinecone_transcript_data_semantic_search': '📝 Transcript Search',
+  'pinecone_email_templates_semantic_search': '📧 Email Templates',
+  'pinecone_faq_data_semantic_search': '❓ FAQ Search',
   
   // Account Management
   'dope_active_account_lookup': '📊 Account Lookup',
-  'dope_active_account_upsert': '➕ Add Account Data',
+  'dope_active_account_upsert': '➕ Add Account',
   
   // Web Tools
   'web_search': '🌐 Web Search'

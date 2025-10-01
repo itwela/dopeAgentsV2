@@ -40,31 +40,31 @@ const extractContent = (content: any): string => {
 // Tool display names mapping for cleaner user interface
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
   // Email & Proposal Tools
-  'list_templates': '📧 Email Templates',
+  'list_templates': '📧 Templates',
   'list_how_to_generate_a_proposal': '📋 Proposal Guide',
   'in_depth_business_analysis': '🔍 Business Analysis',
 
   // Leadership & Team Tools
-  'facilitate_standup': '👥 Standup Meetings',
+  'facilitate_standup': '👥 Standup',
 
   // Pinecone Database Tools
-  'pinecone_list_indexes': '🗂️ DOPE List Indexes',
-  'pinecone_create_index': '➕ DOPE Create Index',
-  'pinecone_add_to_index': '📝 DOPE Add Data',
-  'pinecone_add_employee_data_to_index': '👤 DOPE Add Employee Data',
-  'pinecone_add_transcript_data_to_index': '📄 DOPE Add Transcript',
-  'pinecone_semantic_search': '🔎 DOPE Semantic Search',
+  'pinecone_list_indexes': '🗂️ List Indexes',
+  'pinecone_create_index': '➕ Create Index',
+  'pinecone_add_to_index': '📝 Add Data',
+  'pinecone_add_employee_data_to_index': '👤 Add Employee',
+  'pinecone_add_transcript_data_to_index': '📄 Add Transcript',
+  'pinecone_semantic_search': '🔎 Search',
 
   // Specialized Pinecone Searches
-  'pinecone_company_knowledge_semantic_search': '🏢 DOPE Company Knowledge',
-  'pinecone_employee_data_semantic_search': '👥 DOPE Employee Profiles',
-  'pinecone_transcript_data_semantic_search': '📝 DOPE Transcript Search',
-  'pinecone_email_templates_semantic_search': '📧 DOPE Email Templates Search',
-  'pinecone_faq_data_semantic_search': '❓ DOPE FAQ Search',
+  'pinecone_company_knowledge_semantic_search': '🏢 Company Knowledge',
+  'pinecone_employee_data_semantic_search': '👥 Employee Profiles',
+  'pinecone_transcript_data_semantic_search': '📝 Transcript Search',
+  'pinecone_email_templates_semantic_search': '📧 Email Templates',
+  'pinecone_faq_data_semantic_search': '❓ FAQ Search',
 
   // Account Management
-  'dope_active_account_lookup': '📊DOPE Account Lookup',
-  'dope_active_account_upsert': '➕DOPE Add Account Data',
+  'dope_active_account_lookup': '📊 Account Lookup',
+  'dope_active_account_upsert': '➕ Add Account',
 
   // Web Tools
   'web_search': '🌐 Web Search'
@@ -1003,26 +1003,36 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
 
             {/* Tools dropdown overlay */}
             {isToolsOpen && hasCurrentAgentTools ? (
-              /*
-                         <div className="z-30 max-h-60 overflow-auto rounded-md border border-border bg-popover p-2 shadow-sm">
-                            <div className="text-xs px-2 py-1 text-muted-foreground">Tools</div>
-                            <div className="mt-1 grid grid-cols-1 gap-1">
-                              {currentAgentInfo!.tools.map((tool) => (
-                                <Button
-                                  key={tool}
-                                  variant="ghost"
-                                  size="sm"
-                                  className="justify-start text-xs h-8"
-                                  onClick={() => handleSelectTool(tool)}
-                                  disabled={isLoading}
-                                >
-                                  {tool}
-                                </Button>
-                              ))}
-                            </div>
-                          </div>
-                          */
-              <></>
+              <div ref={toolsContainerRef} className="mb-3 rounded-md border border-border bg-card p-2 shadow-sm" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-2 py-1">
+                  <div className="text-xs text-muted-foreground">Tools</div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => setIsToolsOpen(false)}
+                    disabled={isLoading}
+                  >
+                    Hide
+                  </Button>
+                </div>
+                <div className="mt-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1">
+                  {currentAgentInfo!.tools.map((tool) => (
+                    <Button
+                      key={tool}
+                      variant={selectedTools.includes(tool) ? "default" : "outline"}
+                      size="sm"
+                      className="justify-start text-xs h-8"
+                      onClick={() => handleSelectTool(tool)}
+                      disabled={isLoading}
+                      title={tool}
+                    >
+                      {getToolDisplayName(tool)}
+                      {selectedTools.includes(tool) && <Check className="h-3 w-3 ml-1" />}
+                    </Button>
+                  ))}
+                </div>
+              </div>
             ) : null}
 
             <div className="relative border border-border rounded-lg bg-background hover:border-ring transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring">
@@ -1043,8 +1053,8 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
 
 
               <div className="flex p-2 items-center w-full justify-between gap-2">
-                {/* Tools button */}
-                <div className="py-3">
+                {/* Tools button and selected tool display */}
+                <div className="py-3 flex items-center gap-2">
                   {!isToolsOpen && (
                     <Button
                       variant="outline"
@@ -1061,6 +1071,21 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
                     >
                       <Plus className="h-3 w-3" />
                     </Button>
+                  )}
+                  
+                  {/* Selected tool badge for initial view */}
+                  {selectedTools.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      <Badge
+                        variant="secondary"
+                        className="text-xs px-2 py-1 cursor-pointer hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                        onClick={() => removeSelectedTool(selectedTools[0])}
+                        title={`Remove ${getToolDisplayName(selectedTools[0])}`}
+                      >
+                        {getToolDisplayName(selectedTools[0])}
+                        <X className="h-3 w-3 ml-1" />
+                      </Badge>
+                    </div>
                   )}
                 </div>
 
@@ -1167,30 +1192,6 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
         {/* Fixed bottom input (shared) */}
         <div className="p-4 max-w-3xl w-[75%] bottom-0 fixed relative place-self-center">
 
-          {/* Tools dropdown overlay */}
-          {isToolsOpen && hasCurrentAgentTools ? (
-            /*
-                       <div className="z-30 max-h-60 overflow-auto rounded-md border border-border bg-popover p-2 shadow-sm">
-                          <div className="text-xs px-2 py-1 text-muted-foreground">Tools</div>
-                          <div className="mt-1 grid grid-cols-1 gap-1">
-                            {currentAgentInfo!.tools.map((tool) => (
-                              <Button
-                                key={tool}
-                                variant="ghost"
-                                size="sm"
-                                className="justify-start text-xs h-8"
-                                onClick={() => handleSelectTool(tool)}
-                                disabled={isLoading}
-                              >
-                                {tool}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                        */
-            <></>
-          ) : null}
-
           <div className="relative border border-border rounded-lg bg-background hover:border-ring transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring">
 
             <div className="flex items-end p-3 gap-2">
@@ -1209,8 +1210,8 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
 
 
             <div className="flex p-2 items-center w-full justify-between gap-2">
-              {/* Tools button */}
-              <div className="py-3">
+              {/* Tools button and selected tool display */}
+              <div className="py-3 flex items-center gap-2">
                 {!isToolsOpen && (
                   <Button
                     variant="outline"
@@ -1218,7 +1219,7 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
                     className="h-7 w-7 p-0 rounded-full"
                     onClick={(e) => {
                       e.stopPropagation();
-                      console.log('Plus button clicked, current isToolsOpen:', isToolsOpen);
+                      console.log('Second plus button clicked, current isToolsOpen:', isToolsOpen);
                       console.log('canShowToolsDropdown:', canShowToolsDropdown);
                       setIsToolsOpen(true);
                     }}
@@ -1227,6 +1228,21 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
                   >
                     <Plus className="h-3 w-3" />
                   </Button>
+                )}
+                
+                {/* Selected tool badge for second input */}
+                {selectedTools.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    <Badge
+                      variant="secondary"
+                      className="text-xs px-2 py-1 cursor-pointer hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                      onClick={() => removeSelectedTool(selectedTools[0])}
+                      title={`Remove ${getToolDisplayName(selectedTools[0])}`}
+                    >
+                      {getToolDisplayName(selectedTools[0])}
+                      <X className="h-3 w-3 ml-1" />
+                    </Badge>
+                  </div>
                 )}
               </div>
 
