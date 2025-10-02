@@ -54,6 +54,10 @@ interface AgentChatContextType {
   // Current agent
   currentAgent: string;
   setCurrentAgent: (agent: string) => void;
+  
+  // User info
+  userId?: string;
+  userName?: string;
 }
 
 const AgentChatContext = createContext<AgentChatContextType | undefined>(undefined);
@@ -196,6 +200,8 @@ export const AgentChatProvider: React.FC<AgentChatProviderProps> = ({
     setIsLoading,
     currentAgent,
     setCurrentAgent,
+    userId,
+    userName,
   };
 
   return (

@@ -4,22 +4,29 @@ import { SidebarProvider, SidebarInset, SidebarTrigger, SidebarRail } from "./ui
 import { AppSidebar } from "./app-sidebar"
 import { useAgentChat } from "./providers/agent-chat-provider"
 import { Button } from "./ui/button"
-import { MoreHorizontal, Info, RefreshCw } from "lucide-react"
+import { MoreHorizontal, Info, RefreshCw, Pencil, Check, X } from "lucide-react"
 import Image from "next/image"
 import { useState, useEffect } from "react"
 import { AgentInfoModal } from "./agent-info-modal"
 import { ChatAgent } from "../interfaces/agentChatInterfaces"
+import { Input } from "./ui/input"
+import { useMutation } from "convex/react"
+import { api } from "../convex/_generated/api"
 
 interface MainLayoutProps {
   children: React.ReactNode
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const { threads, currentThreadId, setMessages, setCurrentThreadId, currentAgent } = useAgentChat();
+  const { threads, currentThreadId, setMessages, setCurrentThreadId, currentAgent, loadThreads, userId, userName } = useAgentChat();
   const currentTitle = threads.find(t => t.threadId === currentThreadId)?.title || "DOPE Agents";
   const [showDropdown, setShowDropdown] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [availableAgents, setAvailableAgents] = useState<ChatAgent[]>([]);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState("");
+  
+  const updateThreadTitle = useMutation(api.threads.updateThreadTitle);
 
   // Fetch available agents
   useEffect(() => {
@@ -74,18 +81,96 @@ export function MainLayout({ children }: MainLayoutProps) {
     setCurrentThreadId(null);
   };
 
+  const handleEditTitle = () => {
+    if (currentThreadId && currentTitle !== "DOPE Agents") {
+      setEditedTitle(currentTitle);
+      setIsEditingTitle(true);
+    }
+  };
+
+  const handleSaveTitle = async () => {
+    if (currentThreadId && editedTitle.trim() && editedTitle !== currentTitle) {
+      try {
+        await updateThreadTitle({ threadId: currentThreadId, title: editedTitle.trim() });
+        // Reload threads to show the updated title immediately
+        await loadThreads(userId, userName);
+      } catch (error) {
+        console.error("Failed to update thread title:", error);
+      }
+    }
+    setIsEditingTitle(false);
+    setEditedTitle("");
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingTitle(false);
+    setEditedTitle("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveTitle();
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
+    }
+  };
+
   return (
     <SidebarProvider defaultOpen={false}>
       <AppSidebar />
       <SidebarRail />
       <SidebarInset>
         <header className="sticky top-0 z-30 flex h-12 items-center justify-between gap-2 border-b bg-background px-4 md:px-6">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
             <SidebarTrigger className="md:hidden" />
-            <div className="text-sm font-medium truncate flex items-center gap-2" title={currentTitle}>
-              <Image src="/character.png" alt="Dope Agents" width={16} height={16} />
-              {currentTitle}
-            </div>
+            <Image src="/character.png" alt="Dope Agents" width={16} height={16} className="flex-shrink-0" />
+            {isEditingTitle ? (
+              <div className="flex items-center gap-1 flex-1 min-w-0">
+                <Input
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="h-7 text-sm flex-1"
+                  autoFocus
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950 flex-shrink-0"
+                  onClick={handleSaveTitle}
+                >
+                  <Check className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground flex-shrink-0"
+                  onClick={handleCancelEdit}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 group cursor-pointer flex-1 min-w-0" onClick={handleEditTitle}>
+                <div className="text-sm font-medium truncate" title={currentTitle}>
+                  {currentTitle}
+                </div>
+                {currentThreadId && currentTitle !== "DOPE Agents" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary flex-shrink-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditTitle();
+                    }}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
           <div className="relative">
             <Button
