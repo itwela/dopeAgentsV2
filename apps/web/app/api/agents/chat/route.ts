@@ -1294,7 +1294,7 @@ export async function POST(request: NextRequest) {
     const toolResultMessages = toolCalls
       .flatMap(tc => {
         const resultContent = tc?.result;
-        const messages: Array<{ role: 'assistant'; content: string; timestamp: number; agentName: string }> = [];
+        const messages: Array<{ role: 'assistant'; content: string; timestamp: number; agentName: string; isToolResult?: boolean }> = [];
         
         if (typeof resultContent === 'string') {
           messages.push({
@@ -1302,6 +1302,7 @@ export async function POST(request: NextRequest) {
             content: resultContent,
             timestamp: Date.now(),
             agentName: tc.name || result.lastAgent?.name || currentAgent.name,
+            isToolResult: true,
           });
         } else if (resultContent && typeof resultContent === 'object') {
           // Handle agent tool results - create separate messages for each agent output
@@ -1329,6 +1330,7 @@ export async function POST(request: NextRequest) {
                 content,
                 timestamp: Date.now(),
                 agentName: tc.name || result.lastAgent?.name || currentAgent.name,
+                isToolResult: true,
               });
             }
           }
@@ -1337,7 +1339,7 @@ export async function POST(request: NextRequest) {
       });
 
     // Create simple message history for saving (with formatted content).
-    // Order: prior history -> user -> tool results -> final assistant -> optional comprehensive analysis
+    // Order: prior history -> user -> final assistant
     const messagesToSave = [
       ...savedMessages,
       {
@@ -1346,7 +1348,6 @@ export async function POST(request: NextRequest) {
         timestamp: Date.now(),
         agentName: 'user'
       },
-      ...toolResultMessages,
       {
         role: 'assistant',
         content: finalOutput,

@@ -3,6 +3,7 @@ export interface ChatMessage {
   content: string;
   agentName?: string;
   timestamp: Date;
+  isToolResult?: boolean; // Flag to identify tool result messages
   toolCalls?: Array<{
     name: string;
     arguments: any;

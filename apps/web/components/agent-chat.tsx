@@ -24,6 +24,7 @@ import { AuroraText } from "./ui/aurora-text";
 import { TextAnimate } from "./ui/text-animate";
 import { motion } from "framer-motion";
 
+
 // Helper function to extract content from messages
 const extractContent = (content: any): string => {
   if (typeof content === 'string') {
@@ -265,6 +266,7 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [expandedToolCalls, setExpandedToolCalls] = useState<Set<number>>(new Set());
+  const [expandedToolResults, setExpandedToolResults] = useState<Set<number>>(new Set());
   const [showInfoModal, setShowInfoModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -730,6 +732,16 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
     setExpandedToolCalls(newExpanded);
   };
 
+  const toggleToolResultExpansion = (messageIndex: number) => {
+    const newExpanded = new Set(expandedToolResults);
+    if (newExpanded.has(messageIndex)) {
+      newExpanded.delete(messageIndex);
+    } else {
+      newExpanded.add(messageIndex);
+    }
+    setExpandedToolResults(newExpanded);
+  };
+
   // Agent Handoff Display Component
   const AgentHandoff = ({ handoffs }: { handoffs?: Array<{ from: string, to: string, timestamp: number }> }) => {
     if (!handoffs || handoffs.length === 0) return null;
@@ -801,8 +813,8 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
     };
 
     return (
-      <div className="mt-3 border-t border-border/30 pt-3">
-        <button
+      <div className="mt-3 max-w-full border-t border-border/30 pt-3">
+        <button 
           onClick={() => toggleToolCallsExpansion(messageIndex)}
           className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-left group"
         >
@@ -916,7 +928,7 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
     };
 
     return (
-      <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/50">
+      <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/50 max-w-[80%]">
         <div className="flex flex-wrap gap-1">
           {agentInfo?.capabilities.map((capability) => (
             <Badge key={capability} variant="outline" className="text-xs px-2 py-0.5 text-muted-foreground">
@@ -1100,9 +1112,68 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
           {/* Messages */}
           <ScrollArea className="h-full  w-full place-self-center">
 
-            <div className="space-y-4 overflow-y-scroll w-full">
+            <div className="space-y-4 overflow-y-scroll w-full w-[80%]">
 
               {messages.map((message, index) => {
+                // Handle tool result messages with collapsible UI
+                if ((message as any).isToolResult) {
+                  const isExpanded = expandedToolResults.has(index);
+                  return (
+                    <div key={index} className="flex flex-col max-w-[95%] place-self-start">
+                      <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 p-2">
+                        <button
+                          onClick={() => toggleToolResultExpansion(index)}
+                          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-left group"
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-3 w-3 transition-transform" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3 transition-transform" />
+                          )}
+                          <Settings className="h-3 w-3 group-hover:animate-spin" />
+                          <span className="font-medium">Tool Output: {message.agentName}</span>
+                          <span className="text-xs opacity-50 ml-auto">
+                            {message.timestamp.toLocaleTimeString()}
+                          </span>
+                        </button>
+                        
+                        {isExpanded && (
+                          <div className="mt-2 pt-2 border-t border-blue-200 dark:border-blue-800">
+                            <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  h1: ({ children }) => <h1 className="text-xl font-semibold mb-3 mt-4 text-foreground border-b border-border pb-1 first:mt-0">{children}</h1>,
+                                  h2: ({ children }) => <h2 className="text-lg font-semibold mb-2 mt-3 text-foreground first:mt-0">{children}</h2>,
+                                  h3: ({ children }) => <h3 className="text-base font-medium mb-2 mt-3 text-foreground first:mt-0">{children}</h3>,
+                                  p: ({ children }) => <p className="mb-3 text-foreground leading-6 last:mb-0">{children}</p>,
+                                  ul: ({ children }) => <ul className="mb-3 ml-4 space-y-1 text-foreground [&>li]:list-disc last:mb-0">{children}</ul>,
+                                  ol: ({ children }) => <ol className="mb-3 ml-4 space-y-1 text-foreground [&>li]:list-decimal last:mb-0">{children}</ol>,
+                                  code: ({ children, className }) => {
+                                    const isInline = !className;
+                                    return isInline ? (
+                                      <code className="bg-gray-100 dark:bg-gray-800 text-foreground px-1 py-0.5 rounded text-xs font-mono">{children}</code>
+                                    ) : (
+                                      <div className="mb-2 rounded bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+                                        <pre className="p-2 overflow-x-auto">
+                                          <code className="text-xs font-mono text-gray-800 dark:text-gray-200">{children}</code>
+                                        </pre>
+                                      </div>
+                                    );
+                                  },
+                                  pre: ({ children }) => children,
+                                }}
+                              >
+                                {extractContent(message.content)}
+                              </ReactMarkdown>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+                
                 if (showEmailForm && index === messages.length - 1 && isAssistant(message.role) && isLastMessageAssistantFromCurrent()) {
                   // Render inline form as a chat message right after assistant intro
                   return (
@@ -1164,7 +1235,7 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
                   );
                 }
                 return (
-                  <div key={index} className={`flex flex-col ${message.role === 'user' ? 'max-w-[70%] place-self-end' : 'max-w-[95%] overflow-hidden place-self-start'}`}>
+                  <div key={index} className={`flex flex-col ${message.role === 'user' ? 'max-w-[50%] place-self-end p-1 break-words' : 'max-w-[95%] place-self-start p-1 break-words'}`}>
                     <div className={`rounded-lg p-3 ${getMessageBgColor(message.role)}`}>
                       <div className="flex items-start gap-2">
                         {message.role !== 'system' && (
@@ -1172,7 +1243,7 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
                             {getMessageIcon(message.role)}
                           </div>
                         )}
-                        <div className="flex-1">
+                        <div className="max-w-[80%]">
                           <div className="flex items-center gap-2 mb-1">
                             {message.agentName && (
                               <span className="text-xs font-medium opacity-90 text-red-600">
@@ -1266,7 +1337,6 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
                             </ReactMarkdown>
                           </div>
                           <ToolCalls toolCalls={message.toolCalls} messageIndex={index} />
-                          <AgentHandoff handoffs={message.agentHandoffs} />
                         </div>
                       </div>
                       <MessageActions message={message} messageIndex={index} />
