@@ -1,8 +1,9 @@
 "use client"
 
-import { Home, Settings, Users, FileText, BarChart, Database, LogOut } from "lucide-react"
+import { Home, Settings, Users, FileText, BarChart, Database } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 import {
   Sidebar,
   SidebarContent,
@@ -14,13 +15,15 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  SidebarTrigger,
+  useSidebar,
 } from "./ui/sidebar"
-import { ThemeToggle } from "./theme-toggle"
 import { ThreadSidebar } from "./thread-sidebar"
 import { useAuthActions } from "@convex-dev/auth/react"
 import { useQuery } from "convex/react"
 import { api } from "../convex/_generated/api"
 import { Button } from "./ui/button"
+import Image from "next/image"
 
 // Menu items
 const items = [
@@ -47,6 +50,13 @@ export function AppSidebar() {
   const isAgentsRoute = pathname === '/agents';
   const { signOut } = useAuthActions();
   const currentUser = useQuery(api.auth.currentUser);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { state, isMobile, openMobile } = useSidebar();
+  const isExpanded = isMobile ? openMobile : state === "expanded";
+
+  useEffect(() => {
+    if (!isExpanded && userMenuOpen) setUserMenuOpen(false);
+  }, [isExpanded, userMenuOpen]);
 
   const handleSignOut = async () => {
     try {
@@ -58,23 +68,13 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar>
-      <SidebarHeader className="border-b px-6 py-4">
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="border-b">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-sm bg-primary text-primary-foreground">
-              <span className="text-sm font-bold">A</span>
-            </div>
-            <span className="text-lg font-semibold">DOPE Agents</span>
+          <div className="flex items-center justify-between w-full gap-2">
+            <SidebarTrigger className="hidden md:inline-flex h-8 w-8 p-0" />
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSignOut}
-            className="h-8 w-8 p-0"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
+          {/* Sign out moved to user menu in footer */}
         </div>
       </SidebarHeader>
       
@@ -98,7 +98,7 @@ export function AppSidebar() {
         </SidebarGroup>
         
         {/* Only show conversations on agents route */}
-        {isAgentsRoute && (
+        {isAgentsRoute && isExpanded && (
           <SidebarGroup className="p-0 m-0">
             <SidebarGroupContent className="p-0 m-0">
               <ThreadSidebar className="h-96 p-0 m-0" />
@@ -107,17 +107,37 @@ export function AppSidebar() {
         )}
       </SidebarContent>
       
-      <SidebarFooter className="border-t p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col">
-            {currentUser?.name && (
-              <span className="text-xs text-muted-foreground mt-1">
-                {currentUser.name}
-              </span>
+      <SidebarFooter className="border-t relative">
+        {isExpanded && (
+          <>
+            <button
+              type="button"
+              onClick={() => setUserMenuOpen((v) => !v)}
+              className="flex items-center justify-between w-full text-left p-4 border-0 hover:bg-muted/30 rounded transition-colors"
+              aria-haspopup="menu"
+              aria-expanded={userMenuOpen}
+            >
+              <div className="flex flex-col">
+                {currentUser?.name && (
+                  <span className="text-xs text-muted-foreground mt-1 hover:text-foreground transition-colors">
+                    {currentUser.name}
+                  </span>
+                )}
+              </div>
+            </button>
+            {userMenuOpen && (
+              <div className="absolute place-self-center bottom-12 z-50 min-w-[160px] w-full rounded-md border bg-background shadow-md p-1">
+                <button
+                  type="button"
+                  className="block w-full text-left px-3 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground"
+                  onClick={handleSignOut}
+                >
+                  Sign out
+                </button>
+              </div>
             )}
-          </div>
-          <ThemeToggle />
-        </div>
+          </>
+        )}
       </SidebarFooter>
     </Sidebar>
   );

@@ -19,9 +19,9 @@ export default function AgentsPage() {
 
   return (
     <MainLayout>
-      <div className="h-full overflow-hidden">
+      <div className="h-full w-full overflow-hidden">
         {/* Chat Interface */}
-        <div className={`h-[85vh] overflow-hidden ${hasMessages ? 'w-full max-w-[80vw] h-full' : 'max-w-4xl place-self-center'}`}>
+        <div className={`h-[calc(100vh-4rem)] flex md:h-[calc(100vh-5rem)] overflow-hidden ${hasMessages ? 'w-full md:max-w-[calc(100vw-8rem)] place-self-center overflow-hidden' : 'w-full md:max-w-4xl mx-auto'}`}>
           <AgentChat onMessagesChange={setHasMessages} hasMessages={hasMessages} />
         </div>
       </div>

@@ -40,30 +40,34 @@ const toolIcons: { [key: string]: any } = {
 // Tool display names mapping for cleaner user interface
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
   // Email & Proposal Tools
-  'list_templates': '📧 Email Templates',
+  'list_templates': '📧 Templates',
   'list_how_to_generate_a_proposal': '📋 Proposal Guide',
-  'in_depth_business_analysis': '🔍 Business Analysis',
+  
+  // Agent Tools
+  'business_data_extraction': '🔍 Extract Data',
+  'zip_code_analysis': '📊 Market Analysis',
+  'email_creation': '📧 Create Emails',
   
   // Leadership & Team Tools
-  'facilitate_standup': '👥 Standup Meetings',
+  'facilitate_standup': '👥 Standup',
   
   // Pinecone Database Tools
   'pinecone_list_indexes': '🗂️ List Indexes',
   'pinecone_create_index': '➕ Create Index',
   'pinecone_add_to_index': '📝 Add Data',
-  'pinecone_add_employee_data_to_index': '👤 Add Employee Data',
-  'pinecone_add_transcript_data_to_index': '📄 Add Transcript',
-  'pinecone_semantic_search': '🔎 Semantic Search',
+  'pinecone_add_employee_data_to_index': '👤 Add Employee',
+  'pinecone_semantic_search': '🔎 Search',
   
   // Specialized Pinecone Searches
   'pinecone_company_knowledge_semantic_search': '🏢 Company Knowledge',
   'pinecone_employee_data_semantic_search': '👥 Employee Profiles',
   'pinecone_transcript_data_semantic_search': '📝 Transcript Search',
-  'pinecone_email_templates_semantic_search': '📧 Email Templates Search',
+  'pinecone_email_templates_semantic_search': '📧 Email Templates',
   'pinecone_faq_data_semantic_search': '❓ FAQ Search',
   
   // Account Management
   'dope_active_account_lookup': '📊 Account Lookup',
+  'dope_active_account_upsert': '➕ Add Account',
   
   // Web Tools
   'web_search': '🌐 Web Search'
@@ -96,6 +100,12 @@ function getToolIcon(toolName: string) {
 export function AgentInfoModal({ isOpen, onClose, currentAgent, availableAgents }: AgentInfoModalProps) {
   const currentAgentInfo = availableAgents.find(agent => agent.id === currentAgent);
 
+  // Debug: Log Steve's tools
+  const steveAgent = availableAgents.find(agent => agent.id === 'steve');
+  if (steveAgent && isOpen) {
+    console.log('🔍 Steve Agent Tools:', steveAgent.tools);
+  }
+
   if (!isOpen) return null;
 
   return (
@@ -108,13 +118,13 @@ export function AgentInfoModal({ isOpen, onClose, currentAgent, availableAgents 
           </DialogTitle>
         </DialogHeader>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+        <div className="flex flex-col gap-8 h-full">
           {/* Current Agent Info - Left Side */}
           {currentAgentInfo && (
             <div className="space-y-6">
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-xl p-6 border">
+              <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-950/20 rounded-xl p-6 border">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg">
                     <span className="text-2xl font-bold">
                       {currentAgentInfo.name.charAt(0)}
                     </span>

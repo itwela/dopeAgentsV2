@@ -9,7 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { Badge } from "./ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { ScrollArea } from "./ui/scroll-area";
-import { Send, Bot, User, Loader2, RefreshCw, Copy, Check, Settings, Mic, MicOff, X, ChevronDown, ChevronRight, Info, Database, BarChart3, Users, FileText, Globe, Search, Brain, Target, TrendingUp, MessageSquare, Lightbulb, Shield, Cpu, Activity, ArrowRight, ExternalLink, Plus } from "lucide-react";
+import { Send, Bot, User, Loader2, RefreshCw, Copy, Check, Settings, Mic, MicOff, X, ChevronDown, ChevronRight, Info, Database, BarChart3, Users, FileText, Globe, Search, Brain, Target, TrendingUp, MessageSquare, Lightbulb, Shield, Cpu, Activity, ArrowRight, ExternalLink, Plus, MoreHorizontal } from "lucide-react";
+import { ChatInput } from "./chat-input";
 import AITextLoading from "./ui/ai-text-loading";
 import { useAgentChat } from "./providers/agent-chat-provider";
 import { useQuery, useMutation } from "convex/react";
@@ -19,6 +20,9 @@ import { KnowledgeBaseDropdown } from "./knowledge-base-dropdown";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { ChatMessage, ChatAgent, AgentChatProps, PromptCardData, EmailOutreachFormValues } from "../interfaces/agentChatInterfaces";
+import { AuroraText } from "./ui/aurora-text";
+import { TextAnimate } from "./ui/text-animate";
+import { motion } from "framer-motion";
 
 // Helper function to extract content from messages
 const extractContent = (content: any): string => {
@@ -42,7 +46,11 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   // Email & Proposal Tools
   'list_templates': '📧 Templates',
   'list_how_to_generate_a_proposal': '📋 Proposal Guide',
-  'in_depth_business_analysis': '🔍 Business Analysis',
+
+  // Agent Tools
+  'business_data_extraction': '🔍 Extract Data',
+  'zip_code_analysis': '📊 Market Analysis',
+  'email_creation': '📧 Create Emails',
 
   // Leadership & Team Tools
   'facilitate_standup': '👥 Standup',
@@ -52,7 +60,6 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   'pinecone_create_index': '➕ Create Index',
   'pinecone_add_to_index': '📝 Add Data',
   'pinecone_add_employee_data_to_index': '👤 Add Employee',
-  'pinecone_add_transcript_data_to_index': '📄 Add Transcript',
   'pinecone_semantic_search': '🔎 Search',
 
   // Specialized Pinecone Searches
@@ -77,8 +84,8 @@ const getToolDisplayName = (toolName: string): string => {
 
 const PROMPT_EMAIL_GENERATION: PromptCardData = {
   id: 'email',
-  title: 'In-Depth Business Analysis',
-  prompt: 'Perform an in-depth business analysis including website research, market insights, and tailored email recommendations for a potential or existing Dope Marketing client.',
+  title: 'Business Analysis',
+  prompt: 'I need you to perform a step-by-step business analysis. Please provide the business website, ZIP code, business name, and contact name. I\'ll start with Step 1 (business data extraction) and ask for your confirmation before proceeding to each next step.',
 };
 
 const PROMPT_TRANSCRIPT_TO_SUMMARY: PromptCardData = {
@@ -209,6 +216,28 @@ function EmailOutreachForm({ initial, onSubmit, onCancel }: {
 }
 
 export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange, hasMessages = false }: AgentChatProps) {
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+        delayChildren: 0.1
+      }
+    }
+  };
+
+  const elementVariants = {
+    hidden: { opacity: 0, y: -30 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        duration: 0.5
+      }
+    }
+  };
 
   const {
     messages,
@@ -536,8 +565,8 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
       });
     }
   };
-  const autoResizeTextarea = () => {
-    const textarea = textareaRef.current;
+  const autoResizeTextarea = (el?: HTMLTextAreaElement) => {
+    const textarea = el ?? textareaRef.current;
     if (textarea) {
       textarea.style.height = 'auto';
       const scrollHeight = textarea.scrollHeight;
@@ -547,7 +576,7 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
   };
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
-    autoResizeTextarea();
+    autoResizeTextarea(e.currentTarget);
   };
   const handleSelectTool = (tool: string) => {
     console.log('Tool selected:', tool);
@@ -754,18 +783,10 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
         return result;
       }
       if (result && typeof result === 'object') {
-        // Handle inDepthBusinessAnalysisTool results
-        if (result.completeAnalysis) {
-          return `🎯 **Complete Business Analysis Pipeline**\n\n**Status:** ✅ All agents completed successfully\n**Total Output:** ${(result.businessData?.length || 0) + (result.marketAnalysis?.length || 0) + (result.emailOptions?.length || 0)} characters\n\n${result.completeAnalysis}`;
-        }
-        if (result.businessData) {
-          return `🔍 **Business Data Extraction Results**\n\n**Agent:** BusinessDataExtraction\n**Status:** ✅ Complete\n**Output Size:** ${result.businessData.length} characters\n\n${result.businessData}`;
-        }
-        if (result.marketAnalysis) {
-          return `📊 **Market Analysis Results**\n\n**Agent:** MarketAnalyst\n**Status:** ✅ Complete\n**Output Size:** ${result.marketAnalysis.length} characters\n\n${result.marketAnalysis}`;
-        }
-        if (result.emailOptions) {
-          return `📧 **Email Creation Results**\n\n**Agent:** EmailCreation\n**Status:** ✅ Complete\n**Output Size:** ${result.emailOptions.length} characters\n\n${result.emailOptions}`;
+        // Handle agent tool results
+        if (typeof result === 'string' && result.length > 0) {
+          // This is likely an agent tool result
+          return result;
         }
         // Check for other specific result structures
         if (result.success !== undefined) {
@@ -854,9 +875,17 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
                         ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'
                         : 'bg-background/50'
                       }`}>
-                      <div className="text-xs whitespace-pre-wrap break-words">
-                        {formatToolResult(toolCall.result)}
-                      </div>
+                      {typeof toolCall.result === 'string' ? (
+                        <div className="text-xs [&_*]:break-words [&_*]:whitespace-pre-wrap">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}> 
+                            {toolCall.result}
+                          </ReactMarkdown>
+                        </div>
+                      ) : (
+                        <pre className="text-xs whitespace-pre-wrap break-words">
+                          {formatToolResult(toolCall.result)}
+                        </pre>
+                      )}
                     </div>
                   </div>
                 )}
@@ -937,22 +966,31 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
     // Simple view when no messages and email form is not open - just agent name and input
     return (
       <>
-        <div className={`flex flex-col h-full items-center justify-center ${className}`}>
+        <motion.div 
+          className={`flex flex-col h-full w-full items-center justify-center ${className}`}
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {/* Agent Name */}
           <div className="mb-8 text-center">
             <h1 className="text-2xl font-bold text-foreground mb-2 flex items-center justify-center gap-2">
-              {currentAgentInfo?.name || currentAgent.charAt(0).toUpperCase() + currentAgent.slice(1)}
+              <AuroraText className="text-3xl">
+                {currentAgentInfo?.name || currentAgent.charAt(0).toUpperCase() + currentAgent.slice(1)}
+              </AuroraText>
               <Badge variant="secondary" className="text-xs">Account Manager</Badge>
             </h1>
-            <p className="text-muted-foreground">
-              {currentAgentInfo?.name?.toLowerCase() === 'hermes'
-                ? 'Hermes is optimized as an account manager assistant: summarizing health, prepping QBRs, and surfacing upsell opportunities.'
-                : (currentAgentInfo?.description || 'AI Assistant')}
-            </p>
+            <TextAnimate animation="fadeIn" by="word" duration={0.8} delay={0.3}>
+              <p className="text-muted-foreground">
+                {currentAgentInfo?.name?.toLowerCase() === 'hermes'
+                  ? 'Hermes is optimized as an account manager assistant: summarizing health, prepping QBRs, and surfacing upsell opportunities.'
+                  : (currentAgentInfo?.description || 'AI Assistant')}
+              </p>
+            </TextAnimate>
           </div>
 
           {/* Agent Selection */}
-          <div className="mb-6 flex items-center gap-3">
+          <motion.div className="mb-6 flex items-center gap-3" variants={elementVariants}>
             <Select value={currentAgent} onValueChange={setCurrentAgent}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Select agent" />
@@ -976,10 +1014,10 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
             >
               <Info className="h-4 w-4" />
             </Button>
-          </div>
+          </motion.div>
 
           {/* Preset Prompt Cards for Account Managers */}
-          <div className="mb-10 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-3xl px-4">
+          <motion.div className="mb-10 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-3xl px-4 max-h-64 overflow-y-auto" variants={elementVariants}>
             {PRESET_PROMPTS.map((card) => (
               <PromptCard
                 key={card.title}
@@ -997,190 +1035,35 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
                 }}
               />
             ))}
-          </div>
+          </motion.div>
 
-          <div className="p-4 max-w-3xl w-[75%] bottom-0 fixed relative place-self-center">
+            <motion.div variants={elementVariants} className="w-full">
+              <ChatInput
+              input={input}
+              isLoading={isLoading}
+              isTranscribing={isTranscribing}
+              isRecording={isRecording}
+              canShowToolsDropdown={canShowToolsDropdown}
+              isToolsOpen={isToolsOpen}
+              setIsToolsOpen={setIsToolsOpen}
+              selectedTools={selectedTools}
+              currentAgentInfo={currentAgentInfo}
+              getToolDisplayName={getToolDisplayName}
+              onInputChange={handleInputChange}
+              onKeyDown={handleKeyPress}
+              onSend={() => sendMessage()}
+              onStartRecording={startRecording}
+              onStopRecording={stopRecording}
+              onCancelRecording={cancelRecording}
+              onSelectTool={handleSelectTool}
+              onRemoveSelectedTool={removeSelectedTool}
+              toolsContainerRef={toolsContainerRef}
+              textareaRef={textareaRef}
+              placeholder="Type your message..."
+            />
+            </motion.div>
 
-            {/* Tools dropdown overlay */}
-            {isToolsOpen && hasCurrentAgentTools ? (
-              <div ref={toolsContainerRef} className="mb-3 rounded-md border border-border bg-card p-2 shadow-sm" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between px-2 py-1">
-                  <div className="text-xs text-muted-foreground">Tools</div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={() => setIsToolsOpen(false)}
-                    disabled={isLoading}
-                  >
-                    Hide
-                  </Button>
-                </div>
-                <div className="mt-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1">
-                  {currentAgentInfo!.tools.map((tool) => (
-                    <Button
-                      key={tool}
-                      variant={selectedTools.includes(tool) ? "default" : "outline"}
-                      size="sm"
-                      className="justify-start text-xs h-8"
-                      onClick={() => handleSelectTool(tool)}
-                      disabled={isLoading}
-                      title={tool}
-                    >
-                      {getToolDisplayName(tool)}
-                      {selectedTools.includes(tool) && <Check className="h-3 w-3 ml-1" />}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <div className="relative border border-border rounded-lg bg-background hover:border-ring transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring">
-
-              <div className="flex items-end p-3 gap-2">
-                <Textarea
-                  ref={textareaRef}
-                  placeholder="Type your message..."
-                  value={input}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyPress}
-                  disabled={isLoading}
-                  className="flex-1 min-h-[24px] max-h-[200px] resize-none border-0 bg-transparent p-0 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0"
-                  rows={1}
-                />
-              </div>
-
-
-
-              <div className="flex p-2 items-center w-full justify-between gap-2">
-                {/* Tools button and selected tool display */}
-                <div className="py-3 flex items-center gap-2">
-                  {!isToolsOpen && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 w-7 p-0 rounded-full"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        console.log('Plus button clicked, current isToolsOpen:', isToolsOpen);
-                        console.log('canShowToolsDropdown:', canShowToolsDropdown);
-                        setIsToolsOpen(true);
-                      }}
-                      disabled={!canShowToolsDropdown}
-                      title="Show tools"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  )}
-                  
-                  {/* Selected tool badge for initial view */}
-                  {selectedTools.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      <Badge
-                        variant="secondary"
-                        className="text-xs px-2 py-1 cursor-pointer hover:bg-destructive hover:text-destructive-foreground transition-colors"
-                        onClick={() => removeSelectedTool(selectedTools[0])}
-                        title={`Remove ${getToolDisplayName(selectedTools[0])}`}
-                      >
-                        {getToolDisplayName(selectedTools[0])}
-                        <X className="h-3 w-3 ml-1" />
-                      </Badge>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    onClick={isRecording ? stopRecording : startRecording}
-                    disabled={isLoading || isTranscribing}
-                    size="sm"
-                    variant={isRecording ? "destructive" : "outline"}
-                    className="h-8 w-8 p-0 shrink-0"
-                  >
-                    {isRecording ? (
-                      <MicOff className="h-3 w-3" />
-                    ) : (
-                      <Mic className="h-3 w-3" />
-                    )}
-                  </Button>
-
-                  <Button
-                    onClick={() => sendMessage()}
-                    disabled={!input.trim() || isLoading}
-                    size="sm"
-                    className="h-8 w-8 p-0 shrink-0"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Send className="h-3 w-3" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Audio Recording Panel */}
-              {(isRecording || isTranscribing) && (
-                <div className="absolute inset-0 bg-background/95 backdrop-blur-sm rounded-lg border border-border animate-in slide-in-from-bottom-2 duration-200">
-                  <div className="h-full flex items-center justify-between px-4">
-                    <div className="flex items-center gap-3">
-                      {isRecording ? (
-                        <div className="relative">
-                          <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
-                            <Mic className="h-4 w-4 text-white" />
-                          </div>
-                          <div className="absolute inset-0 w-8 h-8 bg-red-500/30 rounded-full animate-ping"></div>
-                        </div>
-                      ) : (
-                        <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                          <Loader2 className="h-4 w-4 text-primary-foreground animate-spin" />
-                        </div>
-                      )}
-
-                      <div>
-                        <p className="text-sm font-medium">
-                          {isRecording ? 'Recording...' : 'Transcribing...'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {isRecording
-                            ? 'Speak clearly'
-                            : 'Converting to text...'
-                          }
-                        </p>
-                      </div>
-                    </div>
-
-                    {isRecording && (
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={cancelRecording}
-                          variant="outline"
-                          size="sm"
-                          className="h-7 px-3 text-xs"
-                        >
-                          <X className="h-3 w-3 mr-1" />
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={stopRecording}
-                          size="sm"
-                          className="h-7 px-3 text-xs"
-                        >
-                          <Check className="h-3 w-3 mr-1" />
-                          Done
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <p className="text-xs text-muted-foreground mt-3">
-              Press Enter to send, Shift+Enter for new line.
-            </p>
-          </div>
-        </div>
+        </motion.div>
 
         <AgentInfoModal
           isOpen={showInfoModal}
@@ -1189,154 +1072,14 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
           availableAgents={availableAgents}
         />
 
-        {/* Fixed bottom input (shared) */}
-        <div className="p-4 max-w-3xl w-[75%] bottom-0 fixed relative place-self-center">
-
-          <div className="relative border border-border rounded-lg bg-background hover:border-ring transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring">
-
-            <div className="flex items-end p-3 gap-2">
-              <Textarea
-                ref={textareaRef}
-                placeholder="Type your message..."
-                value={input}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyPress}
-                disabled={isLoading}
-                className="flex-1 min-h-[24px] max-h-[200px] resize-none border-0 bg-transparent p-0 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0"
-                rows={1}
-              />
+        {isLoading && thinkingDuration >= 180 && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+            <div className="px-3 py-2 text-xs rounded-md border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm text-muted-foreground">
+              Some research takes longer to complete. Please hang tight while I finish gathering results.
             </div>
-
-
-
-            <div className="flex p-2 items-center w-full justify-between gap-2">
-              {/* Tools button and selected tool display */}
-              <div className="py-3 flex items-center gap-2">
-                {!isToolsOpen && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0 rounded-full"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log('Second plus button clicked, current isToolsOpen:', isToolsOpen);
-                      console.log('canShowToolsDropdown:', canShowToolsDropdown);
-                      setIsToolsOpen(true);
-                    }}
-                    disabled={!canShowToolsDropdown}
-                    title="Show tools"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                )}
-                
-                {/* Selected tool badge for second input */}
-                {selectedTools.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    <Badge
-                      variant="secondary"
-                      className="text-xs px-2 py-1 cursor-pointer hover:bg-destructive hover:text-destructive-foreground transition-colors"
-                      onClick={() => removeSelectedTool(selectedTools[0])}
-                      title={`Remove ${getToolDisplayName(selectedTools[0])}`}
-                    >
-                      {getToolDisplayName(selectedTools[0])}
-                      <X className="h-3 w-3 ml-1" />
-                    </Badge>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  onClick={isRecording ? stopRecording : startRecording}
-                  disabled={isLoading || isTranscribing}
-                  size="sm"
-                  variant={isRecording ? "destructive" : "outline"}
-                  className="h-8 w-8 p-0 shrink-0"
-                >
-                  {isRecording ? (
-                    <MicOff className="h-3 w-3" />
-                  ) : (
-                    <Mic className="h-3 w-3" />
-                  )}
-                </Button>
-
-                <Button
-                  onClick={() => sendMessage()}
-                  disabled={!input.trim() || isLoading}
-                  size="sm"
-                  className="h-8 w-8 p-0 shrink-0"
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Send className="h-3 w-3" />
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {/* Audio Recording Panel */}
-            {(isRecording || isTranscribing) && (
-              <div className="absolute inset-0 bg-background/95 backdrop-blur-sm rounded-lg border border-border animate-in slide-in-from-bottom-2 duration-200">
-                <div className="h-full flex items-center justify-between px-4">
-                  <div className="flex items-center gap-3">
-                    {isRecording ? (
-                      <div className="relative">
-                        <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
-                          <Mic className="h-4 w-4 text-white" />
-                        </div>
-                        <div className="absolute inset-0 w-8 h-8 bg-red-500/30 rounded-full animate-ping"></div>
-                      </div>
-                    ) : (
-                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                        <Loader2 className="h-4 w-4 text-primary-foreground animate-spin" />
-                      </div>
-                    )}
-
-                    <div>
-                      <p className="text-sm font-medium">
-                        {isRecording ? 'Recording...' : 'Transcribing...'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {isRecording
-                          ? 'Speak clearly'
-                          : 'Converting to text...'
-                        }
-                      </p>
-                    </div>
-                  </div>
-
-                  {isRecording && (
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={cancelRecording}
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-3 text-xs"
-                      >
-                        <X className="h-3 w-3 mr-1" />
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={stopRecording}
-                        size="sm"
-                        className="h-7 px-3 text-xs"
-                      >
-                        <Check className="h-3 w-3 mr-1" />
-                        Done
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
+        )}
 
-          <p className="text-xs text-muted-foreground mt-3">
-            Press Enter to send, Shift+Enter for new line.
-          </p>
-        </div>
       </>
     );
   }
@@ -1344,82 +1087,18 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
   // Full chat view when there are messages
   return (
     <>
-      <div className="fixed w-full max-w-[80%] top-0 z-20 bg-background  p-4 pb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Bot className="h-5 w-5" />
-              {isEditingTitle ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    className="px-2 py-1 rounded border border-input bg-background text-sm"
-                    value={titleDraft}
-                    onChange={(e) => setTitleDraft(e.target.value)}
-                    placeholder="Enter thread title"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        saveTitle();
-                      } else if (e.key === 'Escape') {
-                        e.preventDefault();
-                        cancelEditTitle();
-                      }
-                    }}
-                  />
-                  <Button size="sm" onClick={saveTitle} disabled={isSavingTitle}>
-                    {isSavingTitle ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={cancelEditTitle} disabled={isSavingTitle}>Cancel</Button>
-                </div>
-              ) : (
-                <button
-                  className="text-left hover:underline decoration-dotted decoration-1"
-                  onClick={startEditTitle}
-                  title="Click to edit title"
-                >
-                  {(() => {
-                    if (currentThreadId) {
-                      const currentThread = threads.find(thread => thread.threadId === currentThreadId);
-                      return currentTitleOverride || currentThread?.title || "Chat";
-                    }
-                    return "New Chat";
-                  })()}
-                </button>
-              )}
-            </CardTitle>
-            <CardDescription>
-              Chat with Dope AI Agents
-            </CardDescription>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowInfoModal(true)}
-              title="Agent Information & Tools"
-            >
-              <Info className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={clearChat}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <Card className={`flex flex-col h-full border-none ${className} bg-transparent`}>
 
 
-        <CardContent className="items-center flex flex-col p-0 pt-16 h-full overflow-hidden">
+      <Card className={`flex  flex-col h-full w-full flex items-center justify-center border-none ${className} bg-transparent`}>
+
+        <CardContent className="items-center lg:w-[80%] flex flex-col p-0  h-[100%] overflow-hidden">
           {lastError && (
             <div className="w-full max-w-4xl mb-3 rounded border border-destructive/40 bg-destructive/10 text-destructive px-3 py-2 text-sm">
               {lastError}
             </div>
           )}
           {/* Messages */}
-          <ScrollArea className="flex-1 h-full max-w-6xl w-full place-self-center overflow-hidden">
+          <ScrollArea className="h-full  w-full place-self-center">
 
             <div className="space-y-4 overflow-y-scroll w-full">
 
@@ -1436,36 +1115,34 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               {message.agentName && (
-                                <span className="text-xs font-medium opacity-70">{message.agentName}</span>
+                                <span className="text-xs font-medium opacity-70 text-red-600">
+                                {message.agentName}
+                                </span>
                               )}
                               <span className="text-xs opacity-50">{message.timestamp.toLocaleTimeString()}</span>
                             </div>
                             <div className="text-sm">
                               <EmailOutreachForm
                                 onSubmit={(values) => {
-                                  // Compose directive instructing Hermes to use the in_depth_business_analysis tool
+                                  // Compose directive for step-by-step business analysis
                                   const directive = [
-                                    'SYSTEM DIRECTIVE: Use the tool in_depth_business_analysis with the following parameters.',
+                                    'I need you to perform a step-by-step business analysis for this client.',
                                     '',
-                                    'Your goal is to generate a one or two-page strategic analysis for the client. This analysis must accomplish two things:',
-                                    '1. Establish Dope Marketing\'s authority by demonstrating a deep understanding of the client\'s market, using data and insights that show we know their market better than they do.',
-                                    '2. Act as a powerful conversation starter that compels the client to get on a call or request a full proposal.',
+                                    'Your goal is to generate a strategic analysis that:',
+                                    '1. Establishes Dope Marketing\'s authority by demonstrating deep understanding of the client\'s market',
+                                    '2. Acts as a powerful conversation starter that compels the client to get on a call or request a full proposal',
                                     '',
-                                    'The analysis should include:',
-                                    '- Key market insights and opportunities based on the client\'s business, website, and service area.',
-                                    '- Actionable recommendations tailored to their business and local market.',
-                                    '- Specific data points, trends, or competitive advantages that position Dope Marketing as the expert.',
-                                    '- Email options that can be sent to the client.',
-                                    '- A clear, compelling call-to-action inviting the client to schedule a call or request a full proposal.',
+                                    'Please start with Step 1 (business data extraction) using these details:',
                                     '',
-                                    'Parameters:',
-                                    `websiteName: ${values.websiteUrl}`,
-                                    `businessZipCode: ${values.zipCode}`,
-                                    `businessName: ${values.companyName || ''}`,
-                                    `primaryContactName: ${values.contactName || ''}`,
+                                    `**Business Website:** ${values.websiteUrl}`,
+                                    `**Business ZIP Code:** ${values.zipCode}`,
+                                    `**Business Name:** ${values.companyName || 'Not provided'}`,
+                                    `**Primary Contact:** ${values.contactName || 'Not provided'}`,
+                                    '',
+                                    'After Step 1 completes, ask me if I want to proceed with Step 2, then Step 3.',
                                   ].join('\n');
 
-                                  // Send immediately using override to ensure tool call happens server-side
+                                  // Send the analysis request
                                   sendMessage(directive);
                                   setShowEmailForm(false);
                                   setShouldAutoScroll(true);
@@ -1487,7 +1164,7 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
                   );
                 }
                 return (
-                  <div key={index} className={`flex flex-col ${message.role === 'user' ? 'max-w-[50%] place-self-end' : 'max-w-full place-self-start'}`}>
+                  <div key={index} className={`flex flex-col ${message.role === 'user' ? 'max-w-[70%] place-self-end' : 'max-w-[95%] overflow-hidden place-self-start'}`}>
                     <div className={`rounded-lg p-3 ${getMessageBgColor(message.role)}`}>
                       <div className="flex items-start gap-2">
                         {message.role !== 'system' && (
@@ -1498,7 +1175,7 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             {message.agentName && (
-                              <span className="text-xs font-medium opacity-70">
+                              <span className="text-xs font-medium opacity-90 text-red-600">
                                 {message.agentName}
                               </span>
                             )}
@@ -1624,193 +1301,37 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
 
             </div>
 
-            {/* <div className="h-full min-h-[200px] max-h-[300px] w-full bg-red-500"></div> */}
           </ScrollArea>
 
-          {/* Input */}
-          <div className="p-4 max-w-5xl w-[75%] bottom-0 fixed end flex-1">
-
-
-            {/* Inline tools panel (non-dropdown) */}
-            {isToolsOpen && currentAgentInfo?.tools?.length ? (
-              <div ref={toolsContainerRef} className="mb-3 rounded-md border border-border bg-card p-2 shadow-sm" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between px-2 py-1">
-                  <div className="text-xs text-muted-foreground">Tools</div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={() => setIsToolsOpen(false)}
-                    disabled={isLoading}
-                  >
-                    Hide
-                  </Button>
-                </div>
-                <div className="mt-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1">
-                  {currentAgentInfo.tools.map((tool) => (
-                    <Button
-                      key={tool}
-                      variant={selectedTools.includes(tool) ? "default" : "outline"}
-                      size="sm"
-                      className="justify-start text-xs h-8"
-                      onClick={() => handleSelectTool(tool)}
-                      disabled={isLoading}
-                      title={tool}
-                    >
-                      {getToolDisplayName(tool)}
-                      {selectedTools.includes(tool) && <Check className="h-3 w-3 ml-1" />}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <div className="relative border border-border rounded-lg bg-background hover:border-ring transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring">
-              <div className="flex items-end p-3 gap-2">
-                <Textarea
-                  ref={textareaRef}
-                  placeholder="Type your message..."
-                  value={input}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyPress}
-                  disabled={isLoading}
-                  className="flex-1 min-h-[24px] max-h-[200px] resize-none border-0 bg-transparent p-0 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0"
-                  rows={1}
-                />
-              </div>
-
-              <div className="flex p-2 items-center w-full justify-between gap-2">
-                {/* Tools dropdown (full chat view) */}
-                <div className="relative py-3 flex items-center" ref={toolsContainerRef}>
-                  {!isToolsOpen && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 w-7 p-0 rounded-full"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        console.log('Second plus button clicked, current isToolsOpen:', isToolsOpen);
-                        console.log('currentAgentInfo?.tools?.length:', currentAgentInfo?.tools?.length);
-                        setIsToolsOpen(true);
-                      }}
-                      disabled={isLoading || !currentAgentInfo?.tools?.length}
-                      title="Show tools"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  )}
-
-                  {/* Selected tool badge */}
-                  {selectedTools.length > 0 && (
-                    <div className="flex flex-wrap gap-1 p-2">
-                      <Badge
-                        variant="secondary"
-                        className="text-xs px-2 py-1 cursor-pointer hover:bg-destructive hover:text-destructive-foreground transition-colors"
-                        onClick={() => removeSelectedTool(selectedTools[0])}
-                        title={`Remove ${getToolDisplayName(selectedTools[0])}`}
-                      >
-                        {getToolDisplayName(selectedTools[0])}
-                        <X className="h-3 w-3 ml-1" />
-                      </Badge>
-                    </div>
-                  )}
-
-
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    onClick={isRecording ? stopRecording : startRecording}
-                    disabled={isLoading || isTranscribing}
-                    size="sm"
-                    variant={isRecording ? "destructive" : "outline"}
-                    className="h-8 w-8 p-0 shrink-0"
-                  >
-                    {isRecording ? (
-                      <MicOff className="h-3 w-3" />
-                    ) : (
-                      <Mic className="h-3 w-3" />
-                    )}
-                  </Button>
-
-                  <Button
-                    onClick={() => sendMessage()}
-                    disabled={!input.trim() || isLoading}
-                    size="sm"
-                    className="h-8 w-8 p-0 shrink-0"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Send className="h-3 w-3" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Audio Recording Panel */}
-              {(isRecording || isTranscribing) && (
-                <div className="absolute inset-0 bg-background/95 backdrop-blur-sm rounded-lg border border-border animate-in slide-in-from-bottom-2 duration-200">
-                  <div className="h-full flex items-center justify-between px-4">
-                    <div className="flex items-center gap-3">
-                      {isRecording ? (
-                        <div className="relative">
-                          <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
-                            <Mic className="h-4 w-4 text-white" />
-                          </div>
-                          <div className="absolute inset-0 w-8 h-8 bg-red-500/30 rounded-full animate-ping"></div>
-                        </div>
-                      ) : (
-                        <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                          <Loader2 className="h-4 w-4 text-primary-foreground animate-spin" />
-                        </div>
-                      )}
-
-                      <div>
-                        <p className="text-sm font-medium">
-                          {isRecording ? 'Recording...' : 'Transcribing...'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {isRecording
-                            ? 'Speak clearly'
-                            : 'Converting to text...'
-                          }
-                        </p>
-                      </div>
-                    </div>
-
-                    {isRecording && (
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={cancelRecording}
-                          variant="outline"
-                          size="sm"
-                          className="h-7 px-3 text-xs"
-                        >
-                          <X className="h-3 w-3 mr-1" />
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={stopRecording}
-                          size="sm"
-                          className="h-7 px-3 text-xs"
-                        >
-                          <Check className="h-3 w-3 mr-1" />
-                          Done
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <p className="text-xs text-muted-foreground mt-3">
-              Press Enter to send, Shift+Enter for new line.
-            </p>
-          </div>
         </CardContent>
+
+      {/* Input */}
+       <ChatInput
+          input={input}
+              isLoading={isLoading}
+              isTranscribing={isTranscribing}
+              isRecording={isRecording}
+              canShowToolsDropdown={canShowToolsDropdown}
+              isToolsOpen={isToolsOpen}
+              setIsToolsOpen={setIsToolsOpen}
+              selectedTools={selectedTools}
+              currentAgentInfo={currentAgentInfo}
+              getToolDisplayName={getToolDisplayName}
+              onInputChange={handleInputChange}
+              onKeyDown={handleKeyPress}
+              onSend={() => sendMessage()}
+              onStartRecording={startRecording}
+              onStopRecording={stopRecording}
+              onCancelRecording={cancelRecording}
+              onSelectTool={handleSelectTool}
+              onRemoveSelectedTool={removeSelectedTool}
+              toolsContainerRef={toolsContainerRef}
+              textareaRef={textareaRef}
+              placeholder="Type your message..."
+       />
       </Card>
+
+
       <AgentInfoModal
         isOpen={showInfoModal}
         onClose={() => setShowInfoModal(false)}

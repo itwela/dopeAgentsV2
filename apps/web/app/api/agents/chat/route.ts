@@ -21,9 +21,10 @@ import { listIndexesFromPinecone, createIndex, addToIndex, addEmployeeDataToInde
 import { INDEX_TYPES } from '../../../../types/metadata';
 import { api as convexApi } from "../../../../convex/_generated/api";
 
-
 import { setDefaultOpenAIKey } from '@openai/agents';
-import { setTracingExportApiKey } from '@openai/agents';
+import { setTracingExportApiKey, } from '@openai/agents';
+import { RunItem, RunMessageOutputItem } from '@openai/agents';
+
 import { tr } from 'motion/react-client';
 setDefaultOpenAIKey(process.env.NODE_ENV === 'production' ? process.env.OPENAI_API_KEY! : process.env.NEXT_PUBLIC_OPENAI_API_KEY!);
 setTracingExportApiKey(process.env.NODE_ENV === 'production' ? process.env.OPENAI_API_KEY! : process.env.NEXT_PUBLIC_OPENAI_API_KEY!);
@@ -246,32 +247,75 @@ const generateConversationTitle = async (firstMessage: string) => {
 */
 const zipCodeAnalysisAgent = new Agent({
   name: 'MarketAnalyst',
-  instructions: `You are a market research analyst specializing in geographic and demographic analysis for local service businesses. 
-        
-Analyze ZIP code demographic data and provide actionable strategic insights. Focus on:
-- Market size and opportunity
-- Customer segmentation and targeting  
-- Pricing strategies based on income data
-- Service area prioritization
-- Marketing recommendations
-- Growth opportunities
+  instructions: `You are a market research analyst for local service businesses.
 
-Provide concrete, data-driven recommendations. If you don't have access to real-time data, provide the best analysis possible with available information and clearly note what data would be needed for more precise recommendations. Do not ask questions - just provide the analysis.`,
- model: 'gpt-5-mini',
- tools: [webSearchTool()],
- modelSettings: { parallelToolCalls: true }
+  TASK: Produce a concise, field-ready neighborhood and housing analysis within a specified radius of the office.
+
+  Include at the TOP (if provided in context):
+  Seasonal services to prioritize:
+  - [List the services currently marketed for THIS season/month. Use prior context if available; otherwise skim the website. Max 5 bullets.]
+
+  Then organize insights into THREE named categories:
+
+  1) High-End Luxury (Price threshold for “high-end homeowners”)
+  - Determine a numeric price threshold for high-end homes in this market (e.g., 90th–95th percentile of home values). State the threshold as: Price threshold for “high-end homeowners”: $X.
+  - Identify the TOP 5 ZIPs/neighborhoods with the highest share of homes above this threshold.
+  - For EACH ZIP: include ZIP code, one example street or specific address with an estimated/current home value, and add local authority notes (HOA quirks, historic restrictions, city zoning traits, etc.).
+
+  2) Upper-Tier Neighborhoods (Top 20% Median Value ZIPs)
+  - Identify ZIPs ranking in the TOP 20% for median home value.
+  - For EACH ZIP: include ZIP code, 1–2 notable addresses/streets with values, and local notes.
+
+  3) Established Estates (Older + large homes)
+  - Definition: ≥15 years & ≥4,000 sq ft.
+  - Highlight subdivisions/HOAs/neighborhoods that match.
+  - For EACH: include ZIP code, specific subdivision/HOA name, one example address with home value + year built, and local notes.
+
+  Quick Local Brief (MAX 5 bullets):
+  - Blend housing stats and local context (tree cover, HOA quirks, architectural styles, etc.).
+
+  RULES:
+  - Stay concise and practical. Prefer bullets and short paragraphs.
+  - If exact data isn’t available, use best-available public indicators and clearly label estimates.
+  - Do NOT ask questions; proceed with reasonable assumptions and note limitations.
+  - Use the requested radius (miles) around the office; default to 20 miles if not specified.`,
+  model: 'gpt-5-mini',
+  tools: [webSearchTool()],
+  modelSettings: { parallelToolCalls: true }
+}).asTool({
+  toolName: 'zip_code_analysis',
+  toolDescription: 'Analyze ZIP code demographic data and provide actionable market insights for local service businesses.',
 });
+
 
 const businessDataExtractionAgent = new Agent({
   name: 'BusinessDataExtraction',
-  instructions: `You are a business data extraction agent. Extract comprehensive business data from websites and provide detailed analysis.
+  instructions: `You are a business data extraction agent. Produce a short, focused output for the current season/month.
 
-  Extract all relevant business data including: services, markets served, value proposition, differentiators, target customers, trust signals, testimonials, pricing, CTAs, contact methods, locations, social links, headlines, SEO keywords, blog/news titles, FAQs, and technologies mentioned.
-  
-  Be thorough, detailed, and provide actionable insights. Do not ask questions - just extract and analyze the data provided.`,
+  OUTPUT FORMAT (keep it concise):
+  Seasonal services to prioritize:
+  - [Pull directly from the website for the current season/month]
+  - [Ignore off-season services]
+  - [3–7 bullet points maximum]
+
+  Key details:
+  - Service areas (cities/regions)
+  - Target customers (homeowners, B2B, etc.)
+  - Proof points (licenses, years, awards) if present
+  - Relevant promo/CTA if clearly stated
+
+  RULES:
+  - No raw links. Avoid long quotes; use short phrases.
+  - 120–180 words total. Be direct and useful for marketing.
+  - Scan homepage/services (and one obvious seasonal page) only; no deep crawl.
+  - If something isn't stated, omit it rather than guessing.
+  - Do not ask questions.`,
   tools: [webSearchTool()],
   model: "gpt-5-mini",
   modelSettings: { parallelToolCalls: true }
+}).asTool({
+  toolName: 'business_data_extraction',
+  toolDescription: 'Extract seasonal services to prioritize and key details (concise).',
 });
 
 // Tiny agent to generate concise thread titles from message snippets
@@ -293,19 +337,48 @@ RULES:
 const emailCreationAgent = new Agent({
   name: 'EmailCreation',
   instructions: `You are an email creation specialist for Dope Marketing.
-  
+
   ${dopeVoice}
-  
-  Using the business data and market analysis provided, create 3 compelling outreach email options that:
-  1. Demonstrate deep understanding of the client's business and market
-  2. Incorporate specific insights from website research and demographic data
-  3. Follow Dope Marketing's voice and formatting standards
-  4. Include clear CTAs that drive immediate action
-  
-  Return all 3 email options with Subject, Preview, Body, and Signoff for each. Do not ask questions - just create the emails based on the provided data.`,
+
+  TASK: Propose 3–5 DOPE Marketing campaigns tailored to the categories above (from analysis). Campaign types should include:
+  - Neighborhood Reactivation (use past job lists → mail their neighbors)
+  - MTV Cribs (high-end homes, drops of 1,000 / 2,500 / 5,000)
+  - Up to 50% Off Retail EDDM advantage with ZIP-level targeting notes
+
+  FORMAT EACH CAMPAIGN AS: [Tactic → Audience → One-line angle]
+  For each campaign, also provide 3–5 example headlines the account manager can review.
+  Make clear these are suggestions and the AM must verify before sending to the client.
+
+  OUTPUT FORMAT (exactly):
+  Client & Focus: [Client Name] — [current seasonal services list]
+
+  Priority Areas:
+  - High-End Luxury ($X+ Home Concentrations): [Top 3 ZIPs + addresses (with ZIP code + home value) + authority notes]
+  - Upper-Tier Neighborhoods (Top 20–30% Median Value): [Top ZIPs + addresses (with ZIP code + home value) + notes]
+  - Established Estates (Older + Large Homes): [Neighborhoods/HOAs + addresses (with ZIP code + home value) + notes]
+
+  Quick Local Brief (5 bullets max):
+  - [Concise local context]
+
+  Campaigns (3–5):
+  - [Tactic → Audience → One-liner angle]
+
+  Example Headlines (for AM review only, suggestions not final):
+  - Headline 1
+  - Headline 2
+  - Headline 3
+
+  RULES:
+  - Use the most recent Step 1 and Step 2 context.
+  - Keep copy tight and actionable; no jargon; one clear CTA implied.
+  - Do not invent facts; if details are missing, keep that line succinct.
+  - Do not ask questions.`,
   tools: [],
   model: "gpt-5-mini",
   modelSettings: { parallelToolCalls: false }
+}).asTool({
+  toolName: 'email_creation',
+  toolDescription: 'Create compelling outreach emails based on business data and market analysis.',
 });
 
 
@@ -320,7 +393,11 @@ const TOOL_DISPLAY_NAMES = {
   // Email & Proposal Tools
   'list_templates': '📧 Templates',
   'list_how_to_generate_a_proposal': '📋 Proposal Guide',
-  'in_depth_business_analysis': '🔍 Business Analysis',
+  
+  // Agent Tools
+  'business_data_extraction': '🔍 Extract Data',
+  'zip_code_analysis': '📊 Market Analysis',
+  'email_creation': '📧 Create Emails',
   
   // Leadership & Team Tools
   'facilitate_standup': '👥 Standup',
@@ -380,171 +457,6 @@ const listHowToGenerateAProsal = tool({
   },
 });
 
-const inDepthBusinessAnalysisTool = tool({
-  name: 'in_depth_business_analysis',
-  description: 'Perform comprehensive business analysis. Return the complete analysis with all agent outputs - business research, market analysis, and email options. CRITICAL: Do not summarize, condense, or format the agent outputs. Return them exactly as the agents produced them. Do not add commentary, explanations, or formatting. Just return the raw agent outputs.',
-  parameters: z.object({
-    websiteName: z.string().describe('The website to use for scraping'),
-    businessZipCode: z.string().describe('The business zip code to use for market analysis'),
-    businessName: z.string().optional().nullable().describe('The business name to use'),
-    primaryContactName: z.string().optional().nullable().describe('Primary contact name for the business (e.g., Jane Doe)'),
-  }),
-
-  execute: async (input) => {
-
-    const { websiteName, businessZipCode, businessName, primaryContactName } = input;
-    
-
-    const businessAnalizerPrompt = `
-    I need you to build a business strategy for this business.
-
-    - Research their website and identify all services they offer specifically for the fall season. Do NOT include any winter services.
-    - Be exhaustive in your research so I can appear as an expert in the business's service area.
-    - Highlight the services and areas that the business owner would recognize, and help me position myself as an expert for targeting these specific areas for the business's services.
-
-    ${websiteName ? `- Research the website: ${websiteName}` : ''}
-    `;
-    
-    // research business Data
-    console.log(`[inDepthBusinessAnalysisTool] Running BusinessDataExtraction agent for website: ${websiteName}`);
-    const analysisStartTime = Date.now();
-    const analysisResult = await run(businessDataExtractionAgent, [user(businessAnalizerPrompt)], { maxTurns: 3 });
-    const analysisDuration = Date.now() - analysisStartTime;
-    const extractBusinessData = analysisResult.finalOutput || 'Analysis could not be completed';
-    console.log(`[inDepthBusinessAnalysisTool] BusinessDataExtraction agent completed in ${analysisDuration}ms, output length: ${extractBusinessData.length} characters`);
-
-    const promptForZipcodeAnalysis = `
-    Please analyze the area within a 20 mile radius of the business's office location. Your analysis MUST include these four specific strategies:
-
-    1. **"MTV Cribs" (Affluent Homes)**: Identify the top 5-20% of ZIP codes or specific neighborhoods with the highest home values. List specific neighborhood names, median home values, and why these areas are ideal for targeting affluent homeowners.
-
-    2. **"Heavy Movers" (High-Turnover Areas)**: Identify the ZIP codes with the most homes being bought and sold (highest turnover rate). These are areas where homeowners are likely to need services after moving in. Include turnover rates and specific neighborhoods if available.
-
-    3. **"The Sweet Spot" (Older, Valuable Homes)**: Identify areas with older homes (15+ years old) that are still in the top 20% of median home value. These homes often need renovation, maintenance, or upgrades. List specific neighborhoods, average home age, and median values.
-
-    4. **"Neighborhood Reactivation"**: Include this standard paragraph: "Dope Marketing's Neighborhood Reactivation strategy involves mailing postcards to homes surrounding your recently completed jobs. Neighbors who see your crew working are 10x more likely to call. We can launch a targeted campaign around your last 10-50 jobs with no minimums, proof approval, and mail out in under 5 days."
-
-    Be exhaustive and specific in your search for ZIP codes and neighborhoods. Highlight well-known neighborhoods or areas that a local business owner would recognize, so the analysis appears highly knowledgeable about the service area.
-
-    Here is the business's zip code: ${businessZipCode}
-    `
-    // run zipcode analysis
-    console.log(`[inDepthBusinessAnalysisTool] Running MarketAnalyst agent for zip code: ${businessZipCode}`);
-    const zipCodeStartTime = Date.now();
-    const zipCodeAnalysisResult = await run(zipCodeAnalysisAgent, [user(promptForZipcodeAnalysis)], { maxTurns: 3 });
-    const zipCodeDuration = Date.now() - zipCodeStartTime;
-    const zipCodeAnalysis = zipCodeAnalysisResult.finalOutput || 'Analysis could not be completed';
-    console.log(`[inDepthBusinessAnalysisTool] MarketAnalyst agent completed in ${zipCodeDuration}ms, output length: ${zipCodeAnalysis.length} characters`);
-    
-    // run email creation with combined context
-    const emailCreationPrompt = `
-    BUSINESS DATA:
-    ${extractBusinessData}
-
-    MARKET ANALYSIS (INCLUDING 4 KEY STRATEGIES):
-    ${zipCodeAnalysis}
-
-    WHO IS DOPE MARKETING:
-    ${whoIsDopeMarketing}
-
-    DOPE VOICE & STYLE:
-    ${dopeVoice}
-
-    Based on the above business data, market analysis (including MTV Cribs, Heavy Movers, Sweet Spot, and Neighborhood Reactivation strategies), and Dope Marketing's positioning, create 3 tailored outreach email options for this business.
-
-    Each email should:
-    - Reference specific insights from the business research and market analysis
-    - Weave in at least one of the four targeting strategies naturally
-    - Follow Dope Marketing's voice guidelines exactly
-    - Include a clear, reply-based CTA
-    - Feel personalized and data-driven, not generic
-
-    ${primaryContactName ? `- The primary contact name is ${primaryContactName}` : ''}
-    `;
-    
-    console.log(`[inDepthBusinessAnalysisTool] Running EmailCreation agent`);
-    const emailStartTime = Date.now();
-    const emailCreationResult = await run(emailCreationAgent, [user(emailCreationPrompt)], { maxTurns: 1 });
-    const emailDuration = Date.now() - emailStartTime;
-    const emailCreation = emailCreationResult.finalOutput || 'Email creation could not be completed';
-    console.log(`[inDepthBusinessAnalysisTool] EmailCreation agent completed in ${emailDuration}ms, output length: ${emailCreation.length} characters`);
-    
-    // Construct comprehensive analysis output with individual agent outputs
-    const comprehensiveAnalysis = `
-    # 📊 In-Depth Business Analysis Complete
-
-    **Analysis generated by Hermes for ${businessName || 'Client'}**  
-    **Agents Used:** BusinessDataExtraction → MarketAnalyst → EmailCreation  
-    **Generated:** ${new Date().toLocaleString()}
-
-    ---
-
-    ## 🔍 Business Data Extraction Results
-    **Agent:** BusinessDataExtraction  
-    **Status:** ✅ Complete  
-    **Output Length:** ${extractBusinessData.length} characters
-    
-    ${extractBusinessData}
-
-    ---
-
-    ## 📊 Market Analysis Results  
-    **Agent:** MarketAnalyst  
-    **Status:** ✅ Complete  
-    **Output Length:** ${zipCodeAnalysis.length} characters
-    
-    ${zipCodeAnalysis}
-
-    ---
-
-    ## 📧 Email Creation Results
-    **Agent:** EmailCreation  
-    **Status:** ✅ Complete  
-    **Output Length:** ${emailCreation.length} characters
-    
-    ${emailCreation}
-
-    ---
-
-    ## 📋 Executive Summary
-    **Total Analysis Size:** ${(extractBusinessData.length + zipCodeAnalysis.length + emailCreation.length).toLocaleString()} characters  
-    **Agent Pipeline:** 3 agents executed successfully  
-    **Execution Times:** BusinessDataExtraction: ${analysisDuration}ms | MarketAnalyst: ${zipCodeDuration}ms | EmailCreation: ${emailDuration}ms  
-    **Total Processing Time:** ${(analysisDuration + zipCodeDuration + emailDuration)}ms  
-    **Ready for Client Review:** ✅ Yes
-    `;
-    
-    console.log(`[inDepthBusinessAnalysisTool] Analysis complete. Total output length: ${comprehensiveAnalysis.length} characters`);
-    
-    return {
-      success: true,
-      completeAnalysis: comprehensiveAnalysis,
-      businessData: extractBusinessData,
-      marketAnalysis: zipCodeAnalysis,
-      emailOptions: emailCreation,
-      executionMetrics: {
-        businessDataExtraction: {
-          duration: analysisDuration,
-          outputLength: extractBusinessData.length,
-          status: 'completed'
-        },
-        marketAnalysis: {
-          duration: zipCodeDuration,
-          outputLength: zipCodeAnalysis.length,
-          status: 'completed'
-        },
-        emailCreation: {
-          duration: emailDuration,
-          outputLength: emailCreation.length,
-          status: 'completed'
-        },
-        totalDuration: analysisDuration + zipCodeDuration + emailDuration,
-        totalOutputLength: extractBusinessData.length + zipCodeAnalysis.length + emailCreation.length
-      }
-    };
-
-  },
-});
 
 /* ------------------------------------------------------------------------------------------------
 
@@ -813,41 +725,116 @@ const pineconeFaqDataSemanticSearchTool = tool({
 // Lookup Dope Active Account by name
 const dopeActiveAccountLookupTool = tool({
   name: 'dope_active_account_lookup',
-  description: 'Lookup a Dope Active Account by account name and return monthly sends.',
+  description: 'Lookup a Dope Active Account by account name and return a readable summary of 2025 monthly values.',
   parameters: z.object({
     account_name: z.string().describe('Exact account name to look up, e.g., Coconut Cleaning'),
   }),
   execute: async (input) => {
     const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
-    const doc = await convex.query(convexApi.threads.getDopeActiveAccountByName, { account_name: input.account_name });
-    if (!doc) {
-      return { found: false };
+
+    const normalizeQuotes = (s: string) => s.replace(/[\u2018\u2019\u201B\u2032]/g, "'");
+    const removeApostrophes = (s: string) => s.replace(/['’]/g, "");
+    const insertApostropheSOnce = (s: string) => s.replace(/\b([A-Za-z]+)s\b(?!')/, "$1's");
+
+    const original = (input.account_name || '').trim();
+    const normalizedName = normalizeQuotes(original);
+    const candidates = Array.from(new Set([
+      original,
+      normalizedName,
+      removeApostrophes(normalizedName),
+      insertApostropheSOnce(normalizedName),
+    ].filter(Boolean)));
+
+    let doc: any = null;
+    let matchedName: string | null = null;
+    for (const candidate of candidates) {
+      const res = await convex.query(convexApi.threads.getDopeActiveAccountByName, { account_name: candidate });
+      if (res) {
+        doc = res;
+        matchedName = candidate;
+        break;
+      }
     }
-    return { found: true, account: doc };
+
+    if (!doc) {
+      return `No active account found for "${input.account_name}". Tried variants: ${candidates.map(c => `"${c}"`).join(', ')}.`;
+    }
+
+    const toInt = (val: any): number => {
+      if (val === null || val === undefined) return 0;
+      const s = String(val).replace(/,/g, '').trim();
+      const n = parseInt(s, 10);
+      return Number.isFinite(n) ? n : 0;
+    };
+    const fmt = (n: number) => n.toLocaleString('en-US');
+
+    // Use only the 2025 field
+    const yearData = (doc.year_2025 || {}) as Record<string, any>;
+    const monthOrder = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const monthLines: string[] = [];
+    let total = 0;
+    let countedMonths = 0;
+    let topMonth: string | null = null;
+    let topValue = -1;
+    for (const m of monthOrder) {
+      const val = toInt(yearData[m]);
+      monthLines.push(`- ${m} 2025: ${fmt(val)}`);
+      total += val;
+      if (val > 0) countedMonths += 1;
+      if (val > topValue) { topValue = val; topMonth = m; }
+    }
+    const avg = countedMonths > 0 ? Math.round(total / countedMonths) : 0;
+
+    const hubspot = doc.hubspot_id ? `\n- HubSpot ID: ${doc.hubspot_id}` : '';
+    const industry = doc.industry ? `\n- Industry: ${doc.industry}` : '';
+    const accountId = doc.account_id ? `\n- Account ID: ${doc.account_id}` : '';
+
+    const summary = [
+      `# 📊 Active Account Lookup`,
+      `**Account Name:** ${doc.account_name || input.account_name}`,
+      matchedName && matchedName !== (doc.account_name || input.account_name) ? `- Matched Using: ${matchedName}` : '',
+      ``,
+      `## Overview`,
+      `- Found: Yes${accountId}${hubspot}${industry}`,
+      ``,
+      `## 2025`,
+      monthLines.join('\n') || '_No monthly data on record for 2025._',
+      ``,
+      `## Totals`,
+      `- Total Sends: ${fmt(total)}`,
+      `- Average Sends (months with data): ${fmt(avg)}`,
+      topMonth ? `- Top Month: ${topMonth} 2025 (${fmt(topValue)})` : `- Top Month: Not available`,
+    ].join('\n');
+
+    return summary;
   }
 });
 
 // Add/Update Dope Active Account data
 const dopeActiveAccountUpsertTool = tool({
   name: 'dope_active_account_upsert',
-  description: 'Add or update a Dope Active Account with monthly send data.',
+  description: 'Add or update a Dope Active Account with 2025 monthly values.',
   parameters: z.object({
     account_name: z.string().describe('Account name, e.g., Coconut Cleaning'),
     account_id: z.string().nullable().optional().describe('Account ID'),
     hubspot_id: z.string().nullable().optional().describe('HubSpot ID'),
     industry: z.string().nullable().optional().describe('Industry'),
-    Jan_2025: z.string().nullable().optional().describe('January 2025 sends'),
-    Feb_2025: z.string().nullable().optional().describe('February 2025 sends'),
-    Mar_2025: z.string().nullable().optional().describe('March 2025 sends'),
-    Apr_2025: z.string().nullable().optional().describe('April 2025 sends'),
-    May_2025: z.string().nullable().optional().describe('May 2025 sends'),
-    Jun_2025: z.string().nullable().optional().describe('June 2025 sends'),
-    Jul_2025: z.string().nullable().optional().describe('July 2025 sends'),
-    Aug_2025: z.string().nullable().optional().describe('August 2025 sends'),
-    Sep_2025: z.string().nullable().optional().describe('September 2025 sends'),
-    Oct_2025: z.string().nullable().optional().describe('October 2025 sends'),
-    Nov_2025: z.string().nullable().optional().describe('November 2025 sends'),
-    Dec_2025: z.string().nullable().optional().describe('December 2025 sends'),
+    // Use year_2025 to comply with Convex arg validator; server maps to '2025'
+    year_2025: z.object({
+      Jan: z.string().nullable().optional(),
+      Feb: z.string().nullable().optional(),
+      Mar: z.string().nullable().optional(),
+      Apr: z.string().nullable().optional(),
+      May: z.string().nullable().optional(),
+      Jun: z.string().nullable().optional(),
+      Jul: z.string().nullable().optional(),
+      Aug: z.string().nullable().optional(),
+      Sep: z.string().nullable().optional(),
+      Oct: z.string().nullable().optional(),
+      Nov: z.string().nullable().optional(),
+      Dec: z.string().nullable().optional(),
+    }).optional().nullable().describe('2025 year column with nested months'),
+    
   }),
   execute: async (input) => {
     const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
@@ -863,6 +850,14 @@ const dopeActiveAccountUpsertTool = tool({
         filteredInput[key] = value;
       }
     });
+    
+    // Map input['2025'] to year_2025 if provided
+    const anyInput: any = input as any;
+    if (anyInput['2025'] && !input.year_2025) {
+      filteredInput.year_2025 = anyInput['2025'];
+    } else if (input.year_2025) {
+      filteredInput.year_2025 = input.year_2025;
+    }
     
     const result = await convex.mutation(convexApi.threads.upsertDopeActiveAccount, { account: filteredInput });
     return { success: true, id: result };
@@ -957,22 +952,96 @@ const hermesAgent = new Agent({
 
     ${whoIsDopeMarketing}
 
-    If you are directed to analyze a business, please use the in_depth_business_analysis tool to analyze the business.
+    ## ✅ User Satisfaction First
+    Your operating principle is to satisfy the user's immediate request while following your guidelines. If there is ever a conflict between your internal workflow and what the user wants, prioritize the user's current goal. Ask a brief clarifying question only when necessary to proceed correctly.
+
+    ## 🔧 **Available Tools:**
+    You have access to specialized agent tools and account management tools:
     
-    CRITICAL: When using the in_depth_business_analysis tool, do NOT summarize, condense, or reformat the agent outputs. Return them exactly as they are produced. Do not add your own commentary, explanations, or formatting. The tool will return the raw agent outputs and you should present them as-is.
+    **Agent Tools:**
+    - **business_data_extraction**: Extracts comprehensive business data from websites
+    - **zip_code_analysis**: Analyzes ZIP code demographic data and market insights  
+    - **email_creation**: Creates compelling outreach emails based on business data
+    
+    **Account Management Tools:**
+    - **dope_active_account_lookup**: Look up active DOPE Marketing accounts by name to get monthly send data
+    
+    ## 📊 **Business Analysis Workflow (STEP-BY-STEP APPROACH):**
+    ⚠️ **IMPORTANT**: You now use individual agent tools directly in a step-by-step approach for better user experience.
+    
+    FAST-PATH OPTION:
+    - If the user explicitly requests a full analysis or to "run everything" (e.g., "do all three now", "full business analysis"), execute Steps 1 → 2 → 3 in succession without asking for confirmation between steps. Present each step's results as they complete.
+    - Otherwise, default to the step-by-step flow below and ask before proceeding to the next step.
+
+    When a user requests business analysis, execute this 3-step workflow ONE STEP AT A TIME, asking for user confirmation before proceeding:
+
+    ### Step 1: Business Data Extraction (IMMEDIATE)
+    When user requests business analysis, IMMEDIATELY use the **business_data_extraction** agent tool with instructions to produce a SHORT, FOCUSED output:
+    - Title: "Seasonal services to prioritize" with 3–7 bullets pulled directly from the website for the current season/month (ignore off-season services)
+    - Then add a small "Key details" section: service areas, target customers, proof points (if present), and any clear promo/CTA
+    - No raw links or long quotes; 120–180 words total; direct and useful
+    
+    **After Step 1 completes:**
+    - Present the concise results
+    - Ask: "✅ **Step 1 Complete!** I've extracted seasonal services and key details. Proceed with **Step 2: Market Analysis** now?"
+
+    ### Step 2: Market Analysis (ONLY if user confirms)
+    If user confirms Step 2, use the **zip_code_analysis** agent tool to produce:
+    - Seasonal services to prioritize (top, max 5 bullets, current season/month)
+    - Three categories with details per ZIP/neighborhood:
+      1) High-End Luxury: determine and state a price threshold for “high-end homeowners”, list top 5 ZIPs/neighborhoods over threshold; for each: ZIP, example street or address with value, local authority notes
+      2) Upper-Tier Neighborhoods: ZIPs in top 20% median value; for each: ZIP, 1–2 notable addresses/streets with values, local notes
+      3) Established Estates: ≥15 years & ≥4,000 sq ft; highlight subdivisions/HOAs; for each: ZIP, subdivision/HOA name, example address with value + year built, local notes
+    - Quick Local Brief: max 5 bullets blending housing stats and local context (tree cover, HOA quirks, home styles)
+    
+    **After Step 2 completes:**
+    - Present the market analysis results
+    - Ask: "✅ **Step 2 Complete!** I've analyzed the market data. Would you like me to proceed with **Step 3: Email Creation** now?"
+
+    ### Step 3: Email Creation (ONLY if user confirms)
+    If user confirms Step 3, use the **email_creation** agent tool with combined context from Steps 1 & 2 to produce:
+    - Client & Focus, Priority Areas (3 groups), Quick Local Brief (5 bullets max)
+    - Campaigns (3–5): format each as [Tactic → Audience → One-liner angle]
+    - Example Headlines: 3–5 suggestions for AM review (not final)
+    
+    **After Step 3 completes:**
+    - Present the email creation results
+    - Provide final summary: "✅ **Complete Business Analysis Finished!** All three steps completed successfully. Ready for client review."
+
+    ## 📋 **Step Output Format:**
+    For each step, present results like this:
+    # 🔍 Step 1: Business Data Extraction Results
+    **Analysis for:** [Business Name] | **Generated:** [Timestamp]
+    
+    [Raw output from business_data_extraction tool]
+    
+    **Next:** Would you like me to proceed with **Step 2: Market Analysis** now?
+    
+    ## ⚠️ **Critical Rules:**
+    - Execute ONLY ONE STEP AT A TIME
+    - ALWAYS ask for user confirmation before proceeding to the next step
+    - Do NOT summarize, condense, or reformat agent outputs
+    - Return agent outputs exactly as they are produced
+    - Do not add your own commentary or explanations to agent outputs
+    - Present the raw agent outputs as-is
   
-  
-  FORMATTING RULES (APPLY THESE WHEN WRITING RESPONSES):
-  ${STYLE_GUIDE_PROMPT_HERMES}
-  `,
+    FORMATTING RULES (APPLY THESE WHEN WRITING RESPONSES):
+    ${STYLE_GUIDE_PROMPT_HERMES}
+    `,
   handoffDescription: 'Hermes - Account Manager Assistant - Uses tools to help the account manager with account management.',
-  tools: [listTemplatesTool, 
-    inDepthBusinessAnalysisTool, dopeActiveAccountLookupTool, dopeActiveAccountUpsertTool,
+  tools: [
+    listTemplatesTool, 
+    businessDataExtractionAgent,  // Agent as tool
+    zipCodeAnalysisAgent,         // Agent as tool  
+    emailCreationAgent,           // Agent as tool
+    dopeActiveAccountLookupTool,  // Account lookup tool for testing
     listHowToGenerateAProsal, 
     pineconeCompanyKnowledgeSemanticSearchTool, 
     pineconeEmailTemplatesSemanticSearchTool, 
     pineconeTranscriptDataSemanticSearchTool, 
-    pineconeFaqDataSemanticSearchTool, webSearchTool()],
+    pineconeFaqDataSemanticSearchTool, 
+    webSearchTool()
+  ],
   model: "gpt-5-mini",
   modelSettings: {
     parallelToolCalls: true,
@@ -998,7 +1067,7 @@ const steveAgent = new Agent({
     - Ask engaging follow-up questions
   `,
   handoffDescription: 'Steve - Leadership Agent - Enhances team collaboration and development using CliftonStrengths and employee profiles.',
-  tools: [facilitateStandupTool, pineconeAddTranscriptDataToIndexTool, pineconeCompanyKnowledgeSemanticSearchTool, pineconeEmployeeDataSemanticSearchTool, pineconeTranscriptDataSemanticSearchTool, webSearchTool()],
+  tools: [facilitateStandupTool, pineconeCompanyKnowledgeSemanticSearchTool, pineconeEmployeeDataSemanticSearchTool, pineconeTranscriptDataSemanticSearchTool, webSearchTool()],
   model: "gpt-5-mini",
   modelSettings: {
     parallelToolCalls: true,
@@ -1219,18 +1288,7 @@ export async function POST(request: NextRequest) {
     // Formatting agent disabled; rely on Hermes instructions' formatting rules
     let finalOutput: string = result.finalOutput || 'No response generated';
 
-    // If the in_depth_business_analysis tool was used and returned a completeAnalysis,
-    // immediately append it as the next assistant message in the thread without changing
-    // the primary response payload.
-    let comprehensiveAnalysisContent: string | null = null;
-    try {
-      const analysisCall = toolCalls.find((tc) => tc.name === 'in_depth_business_analysis');
-      if (analysisCall && analysisCall.result && typeof analysisCall.result.completeAnalysis === 'string') {
-        comprehensiveAnalysisContent = analysisCall.result.completeAnalysis as string;
-      }
-    } catch (_) {
-      // noop — do not affect normal flow if parsing fails
-    }
+    // Formatting agent disabled; rely on Hermes instructions' formatting rules
 
     // Convert tool call results into assistant messages to appear above the final reply
     const toolResultMessages = toolCalls
@@ -1246,43 +1304,9 @@ export async function POST(request: NextRequest) {
             agentName: tc.name || result.lastAgent?.name || currentAgent.name,
           });
         } else if (resultContent && typeof resultContent === 'object') {
-          // Handle inDepthBusinessAnalysisTool - create separate messages for each agent output
-          if (tc.name === 'in_depth_business_analysis') {
-            // First, show the comprehensive analysis as the main result
-            if (resultContent.completeAnalysis) {
-              messages.push({
-                role: 'assistant',
-                content: `🎯 **Complete Business Analysis Pipeline**\n\n${resultContent.completeAnalysis}`,
-                timestamp: Date.now(),
-                agentName: 'Hermes',
-              });
-            }
-            
-            // Then show individual agent outputs for detailed review
-            if (resultContent.businessData) {
-              messages.push({
-                role: 'assistant',
-                content: `🔍 **Business Data Extraction Results**\n\n**Agent:** BusinessDataExtraction\n**Status:** ✅ Complete\n**Task:** Website research and business data extraction\n\n${resultContent.businessData}`,
-                timestamp: Date.now(),
-                agentName: 'BusinessDataExtraction',
-              });
-            }
-            if (resultContent.marketAnalysis) {
-              messages.push({
-                role: 'assistant',
-                content: `📊 **Market Analysis Results**\n\n**Agent:** MarketAnalyst\n**Status:** ✅ Complete\n**Task:** ZIP code demographic analysis and market insights\n\n${resultContent.marketAnalysis}`,
-                timestamp: Date.now(),
-                agentName: 'MarketAnalyst',
-              });
-            }
-            if (resultContent.emailOptions) {
-              messages.push({
-                role: 'assistant',
-                content: `📧 **Email Creation Results**\n\n**Agent:** EmailCreation\n**Status:** ✅ Complete\n**Task:** Generate tailored outreach email options\n\n${resultContent.emailOptions}`,
-                timestamp: Date.now(),
-                agentName: 'EmailCreation',
-              });
-            }
+          // Handle agent tool results - create separate messages for each agent output
+          if (tc.name === 'business_data_extraction' || tc.name === 'zip_code_analysis' || tc.name === 'email_creation') {
+            // Skip displaying sub-agent tool results entirely to avoid clutter and confusion
           } else {
             // Handle other tool results
             let content: string | null = null;
@@ -1329,20 +1353,13 @@ export async function POST(request: NextRequest) {
         timestamp: Date.now(),
         agentName: result.lastAgent?.name || currentAgent.name,
         toolCalls: toolCalls.length > 0 ? toolCalls : undefined
-      },
-      // Append comprehensive analysis as its own assistant message if present
-      ...(comprehensiveAnalysisContent ? [{
-        role: 'assistant' as const,
-        content: comprehensiveAnalysisContent,
-        timestamp: Date.now(),
-        agentName: result.lastAgent?.name || currentAgent.name,
-      }] : [])
+      }
     ];
 
-    // Save to Convex - generate/set title automatically
+    // Save to Convex - simple create/update without auto-generating titles
     if (currentThreadId) {
       if (savedMessages.length === 0) {
-        // Create new thread with a temporary title
+        // Create new thread with a simple default title
         console.log('[Chat API] Creating new thread with:', { threadId: currentThreadId, userId, userName });
         await convex.mutation(api.threads.createThread, {
           threadId: currentThreadId,
@@ -1413,16 +1430,16 @@ export async function GET() {
       {
         id: 'hermes',
         name: 'Hermes',
-        description: 'Account Manager Assistant - Utilizes templates and company information to generate tailored proposals, analyze markets, and support account management',
-        capabilities: ['web-search', 'proposal-generation', 'client-analysis', 'sales-support', 'market-analysis', 'demographic-insights'],
+        description: 'Account Manager Assistant - Orchestrates comprehensive business analysis workflows using specialized agent tools for data extraction, market analysis, and email creation',
+        capabilities: ['web-search', 'agent-orchestration', 'business-analysis', 'market-research', 'email-generation', 'client-analysis', 'sales-support'],
         tools: [
           'web_search',
-          //'list_templates', 
-          'in_depth_business_analysis', 
+          'business_data_extraction',
+          'zip_code_analysis', 
+          'email_creation',
+          'dope_active_account_lookup',
           'pinecone_company_knowledge_semantic_search', 
-          //'pinecone_email_templates_semantic_search', 
           'pinecone_transcript_data_semantic_search', 
-          //'pinecone_faq_data_semantic_search', 
         ],
       },
       {
@@ -1433,7 +1450,6 @@ export async function GET() {
         tools: [
           'web_search',
 //          'facilitate_standup', 
-          'pinecone_add_transcript_data_to_index', 
           'pinecone_company_knowledge_semantic_search', 
           'pinecone_employee_data_semantic_search', 
           'pinecone_transcript_data_semantic_search', 

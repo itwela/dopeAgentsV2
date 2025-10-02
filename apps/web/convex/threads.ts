@@ -188,18 +188,23 @@ export const upsertDopeActiveAccount = mutation({
       hubspot_id: v.optional(v.string()),
       account_name: v.string(),
       industry: v.optional(v.string()),
-      Jan_2025: v.optional(v.string()),
-      Feb_2025: v.optional(v.string()),
-      Mar_2025: v.optional(v.string()),
-      Apr_2025: v.optional(v.string()),
-      May_2025: v.optional(v.string()),
-      Jun_2025: v.optional(v.string()),
-      Jul_2025: v.optional(v.string()),
-      Aug_2025: v.optional(v.string()),
-      Sep_2025: v.optional(v.string()),
-      Oct_2025: v.optional(v.string()),
-      Nov_2025: v.optional(v.string()),
-      Dec_2025: v.optional(v.string()),
+      year_2025: v.optional(
+        v.object({
+          Jan: v.optional(v.string()),
+          Feb: v.optional(v.string()),
+          Mar: v.optional(v.string()),
+          Apr: v.optional(v.string()),
+          May: v.optional(v.string()),
+          Jun: v.optional(v.string()),
+          Jul: v.optional(v.string()),
+          Aug: v.optional(v.string()),
+          Sep: v.optional(v.string()),
+          Oct: v.optional(v.string()),
+          Nov: v.optional(v.string()),
+          Dec: v.optional(v.string()),
+        })
+      ),
+      
     })
   },
   handler: async (ctx, args) => {
@@ -208,11 +213,19 @@ export const upsertDopeActiveAccount = mutation({
       .query("dopeActiveAccounts")
       .withIndex("by_account_name", (q) => q.eq("account_name", args.account.account_name))
       .first();
+    const baseData = {
+      account_id: args.account.account_id,
+      hubspot_id: args.account.hubspot_id,
+      account_name: args.account.account_name,
+      industry: args.account.industry,
+      year_2025: args.account.year_2025 ? { ...args.account.year_2025 } : (existing?.year_2025 as any) || undefined,
+    } as any;
+
     if (existing) {
-      await ctx.db.patch(existing._id, { ...args.account, updatedAt: now });
+      await ctx.db.patch(existing._id, { ...baseData, updatedAt: now });
       return existing._id;
     }
-    return await ctx.db.insert("dopeActiveAccounts", { ...args.account, createdAt: now, updatedAt: now });
+    return await ctx.db.insert("dopeActiveAccounts", { ...baseData, createdAt: now, updatedAt: now });
   }
 });
 
