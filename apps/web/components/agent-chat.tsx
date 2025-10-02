@@ -329,6 +329,13 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
     };
   }, []);
 
+  // When a new thread is created (plus button) or chat is reset, restore initial UI
+  useEffect(() => {
+    if (!currentThreadId && messages.length === 0) {
+      resetUIState();
+    }
+  }, [currentThreadId, messages.length]);
+
   /*
   */
   const scrollToBottom = () => {
@@ -469,6 +476,7 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
     setMessages([]);
     setCurrentThreadId(null);
     onMessagesChange?.(false);
+    resetUIState();
   };
   const startEditTitle = async () => {
     if (!currentThreadId) return;
@@ -592,6 +600,22 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
 
   const removeSelectedTool = (tool: string) => {
     setSelectedTools([]);
+  };
+  // Fully reset local UI state to initial prompt-cards view
+  const resetUIState = () => {
+    setShowEmailForm(false);
+    setEmailFlowMessageStartIndex(null);
+    setSelectedTools([]);
+    setIsToolsOpen(false);
+    setIsEditingTitle(false);
+    setTitleDraft('');
+    setCurrentTitleOverride('');
+    setLastError(null);
+    setThinkingDuration(0);
+    setThinkingStartTime(null);
+    setShouldAutoScroll(false);
+    setExpandedToolCalls(new Set());
+    setExpandedToolResults(new Set());
   };
   const insertFakeThreadWithForm = (title: string, userPrompt: string) => {
     const startIndex = messages.length;

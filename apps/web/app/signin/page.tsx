@@ -20,6 +20,8 @@ export default function SignInPage() {
   const [step, setStep] = useState<"signUp" | "signIn">("signIn");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<string>("");
+  const [showCustomName, setShowCustomName] = useState<boolean>(false);
+  const [customName, setCustomName] = useState<string>("");
   const [error, setError] = useState<string>("");
 
   const containerVariants = {
@@ -85,10 +87,10 @@ export default function SignInPage() {
       }
 
       if (step === "signUp") {
-        const name = formData.get("name") as string;
+        const name = (formData.get("name") as string) || "";
         const organization = formData.get("organization") as string;
         
-        if (!name || !organization) {
+        if (!name.trim() || !organization) {
           setError("Please fill in all required fields");
           setIsLoading(false);
           return;
@@ -130,6 +132,8 @@ export default function SignInPage() {
       console.log("Loading complete");
     }
   };
+
+  const computedName = (customName || "").trim() || selectedEmployee;
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-background">
@@ -206,7 +210,7 @@ export default function SignInPage() {
                     <Select 
                       value={selectedEmployee} 
                       onValueChange={setSelectedEmployee}
-                      required
+                      disabled={showCustomName}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select your name" />
@@ -225,7 +229,30 @@ export default function SignInPage() {
                         )}
                       </SelectContent>
                     </Select>
-                    <input type="hidden" name="name" value={selectedEmployee} />
+                    <div className="text-xs text-muted-foreground">
+                      Don&apos;t see your name? {" "}
+                      <button
+                        type="button"
+                        onClick={() => setShowCustomName((v) => !v)}
+                        className="underline underline-offset-2"
+                      >
+                        {showCustomName ? "Use the list instead" : "Type it instead"}
+                      </button>
+                    </div>
+                    {showCustomName && (
+                      <div className="space-y-2 mt-2">
+                        <Label htmlFor="customName">Enter your name</Label>
+                        <Input 
+                          id="customName" 
+                          name="customName" 
+                          type="text" 
+                          placeholder="Your full name"
+                          value={customName}
+                          onChange={(e) => setCustomName(e.target.value)}
+                        />
+                      </div>
+                    )}
+                    <input type="hidden" name="name" value={computedName} />
                   </motion.div>
                 )}
                 {step === "signUp" && (
