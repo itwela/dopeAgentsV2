@@ -260,22 +260,25 @@ const zipCodeAnalysisAgent = new Agent({
   1) High-End Luxury (Price threshold for “high-end homeowners”)
   - Determine a numeric price threshold for high-end homes in this market (e.g., 90th–95th percentile of home values). State the threshold as: Price threshold for “high-end homeowners”: $X.
   - Identify the TOP 5 ZIPs/neighborhoods with the highest share of homes above this threshold.
-  - For EACH ZIP: include ZIP code, one example street or specific address with an estimated/current home value, and add local authority notes (HOA quirks, historic restrictions, city zoning traits, etc.).
+  - For EACH ZIP: include ZIP code, at least 3 specific example addresses or streets with estimated/current home values, and add local authority notes (HOA quirks, historic restrictions, city zoning traits, etc.).
+  - Neighborhood drilldown: for EACH ZIP, list 3–7 sub-areas (neighborhoods/boroughs/villages) within that ZIP (e.g., for a large city, list multiple sub-neighborhoods or districts within that ZIP rather than just one main area).
 
   2) Upper-Tier Neighborhoods (Top 20% Median Value ZIPs)
   - Identify ZIPs ranking in the TOP 20% for median home value.
-  - For EACH ZIP: include ZIP code, 1–2 notable addresses/streets with values, and local notes.
+  - For EACH ZIP: include ZIP code, at least 3 notable addresses/streets with values, local notes, and a neighborhood drilldown of 3–7 sub-areas within the ZIP.
 
   3) Established Estates (Older + large homes)
   - Definition: ≥15 years & ≥4,000 sq ft.
   - Highlight subdivisions/HOAs/neighborhoods that match.
-  - For EACH: include ZIP code, specific subdivision/HOA name, one example address with home value + year built, and local notes.
+  - For EACH: include ZIP code, specific subdivision/HOA name, and at least 3 specific addresses with home value + year built, and local notes. Also list 3–7 sub-areas within the ZIP if applicable.
 
   Quick Local Brief (MAX 5 bullets):
   - Blend housing stats and local context (tree cover, HOA quirks, architectural styles, etc.).
 
   RULES:
   - Stay concise and practical. Prefer bullets and short paragraphs.
+  - For every ZIP mentioned in any category, include at least 3 example addresses/streets with values and a list of 3–7 neighborhoods/boroughs/villages inside that ZIP.
+  - Do NOT stop at a single macro area name (e.g., “Buckhead”). Enumerate multiple sub-neighborhoods/boroughs/villages within each ZIP and tie example addresses to them.
   - If exact data isn’t available, use best-available public indicators and clearly label estimates.
   - Do NOT ask questions; proceed with reasonable assumptions and note limitations.
   - Use the requested radius (miles) around the office; default to 20 miles if not specified.`,
@@ -989,10 +992,12 @@ const hermesAgent = new Agent({
     If user confirms Step 2, use the **zip_code_analysis** agent tool to produce:
     - Seasonal services to prioritize (top, max 5 bullets, current season/month)
     - Three categories with details per ZIP/neighborhood:
-      1) High-End Luxury: determine and state a price threshold for “high-end homeowners”, list top 5 ZIPs/neighborhoods over threshold; for each: ZIP, example street or address with value, local authority notes
-      2) Upper-Tier Neighborhoods: ZIPs in top 20% median value; for each: ZIP, 1–2 notable addresses/streets with values, local notes
-      3) Established Estates: ≥15 years & ≥4,000 sq ft; highlight subdivisions/HOAs; for each: ZIP, subdivision/HOA name, example address with value + year built, local notes
+      1) High-End Luxury: determine and state a price threshold for “high-end homeowners”, list top 5 ZIPs/neighborhoods over threshold; for each ZIP provide at least 3 example addresses/streets with values, local authority notes, AND a neighborhood drilldown listing 3–7 sub-areas (neighborhoods/boroughs/villages) within that ZIP
+      2) Upper-Tier Neighborhoods: ZIPs in top 20% median value; for each ZIP provide at least 3 example addresses/streets with values, local notes, AND a neighborhood drilldown listing 3–7 sub-areas within that ZIP
+      3) Established Estates: ≥15 years & ≥4,000 sq ft; highlight subdivisions/HOAs; for each ZIP/subdivision provide at least 3 example addresses with value + year built, local notes, AND list 3–7 sub-areas within the ZIP
     - Quick Local Brief: max 5 bullets blending housing stats and local context (tree cover, HOA quirks, home styles)
+    
+    - Critical: Do NOT stop at a single macro area name (e.g., “Buckhead”). Enumerate multiple sub-neighborhoods/boroughs/villages within each ZIP and tie example addresses to them.
     
     **After Step 2 completes:**
     - Present the market analysis results
