@@ -10,8 +10,10 @@
 
 import type * as CustomProfile from "../CustomProfile.js";
 import type * as auth from "../auth.js";
+import type * as clients from "../clients.js";
 import type * as employeeProfiles from "../employeeProfiles.js";
 import type * as http from "../http.js";
+import type * as projects from "../projects.js";
 import type * as threads from "../threads.js";
 
 import type {
@@ -31,8 +33,10 @@ import type {
 declare const fullApi: ApiFromModules<{
   CustomProfile: typeof CustomProfile;
   auth: typeof auth;
+  clients: typeof clients;
   employeeProfiles: typeof employeeProfiles;
   http: typeof http;
+  projects: typeof projects;
   threads: typeof threads;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

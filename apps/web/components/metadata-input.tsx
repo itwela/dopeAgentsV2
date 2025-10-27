@@ -210,6 +210,7 @@ export function MetadataInput({ indexName, metadata, onChange }: MetadataInputPr
               <SelectItem value="guideline">Guideline</SelectItem>
               <SelectItem value="training">Training</SelectItem>
               <SelectItem value="reference">Reference</SelectItem>
+              <SelectItem value="key-information">Key Information</SelectItem>
               <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>

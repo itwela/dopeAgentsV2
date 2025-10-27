@@ -5,12 +5,25 @@ import { MainLayout } from "../../components/main-layout";
 import { AgentChat } from "../../components/agent-chat";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAgentChat } from "../../components/providers/agent-chat-provider";
 
 export default function AgentsPage() {
   const [hasMessages, setHasMessages] = useState(false);
   const isAuthed = useQuery(api.auth.isAuthenticated, {});
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { setCurrentThreadId } = useAgentChat();
+  
+  // Handle threadId from query parameter (for workflow chat integration)
+  useEffect(() => {
+    const threadId = searchParams.get('threadId');
+    if (threadId) {
+      setCurrentThreadId(threadId);
+      // Clean up URL after loading thread
+      router.replace('/agents');
+    }
+  }, [searchParams, setCurrentThreadId, router]);
 
   useEffect(() => {
     if (isAuthed === undefined) return;

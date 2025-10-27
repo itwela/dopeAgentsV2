@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, Settings, Users, FileText, BarChart, Database } from "lucide-react"
+import { Home, Settings, Users, FileText, BarChart, Database, Workflow } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -31,6 +31,11 @@ const items = [
     title: "Agents",
     url: "/agents",
     icon: Users,
+  },
+  {
+    title: "Workflows",
+    url: "/workflows",
+    icon: Workflow,
   },
   {
     title: "Knowledgebase",
@@ -68,8 +73,8 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b">
+    <Sidebar collapsible="icon" className="glass-sidebar">
+      <SidebarHeader className="border-b glass-sidebar">
         <div className="flex items-center justify-between">
           <div className="flex items-center justify-between w-full gap-2">
             <SidebarTrigger className="hidden md:inline-flex h-8 w-8 p-0" />
@@ -107,7 +112,7 @@ export function AppSidebar() {
         )}
       </SidebarContent>
       
-      <SidebarFooter className="border-t relative">
+      <SidebarFooter className="border-t relative glass-sidebar">
         {isExpanded && (
           <>
             <button
@@ -126,7 +131,7 @@ export function AppSidebar() {
               </div>
             </button>
             {userMenuOpen && (
-              <div className="absolute place-self-center bottom-12 z-50 min-w-[160px] w-full rounded-md border bg-background shadow-md p-1">
+              <div className="absolute place-self-center bottom-12 z-50 min-w-[160px] w-full rounded-xl glass-dropdown p-1">
                 <button
                   type="button"
                   className="block w-full text-left px-3 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground"

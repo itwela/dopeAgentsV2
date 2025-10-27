@@ -5,7 +5,7 @@ import { Button } from "./ui/button"
 import { Textarea } from "./ui/textarea"
 import { Badge } from "./ui/badge"
 import { Label } from "./ui/label"
-import { Plus, Check, X, Mic, MicOff, Loader2, Send } from "lucide-react"
+import { Plus, Check, X, Mic, MicOff, Loader2, Send, ArrowUp, ArrowDown } from "lucide-react"
 import { TextAnimate } from "./ui/text-animate"
 
 type AgentInfo = {
@@ -31,6 +31,8 @@ export interface ChatInputProps {
   onCancelRecording: () => void
   onSelectTool: (tool: string) => void
   onRemoveSelectedTool: (tool: string) => void
+  onScrollToTop?: () => void
+  onScrollToBottom?: () => void
   toolsContainerRef: React.RefObject<HTMLDivElement | null>
   textareaRef: React.RefObject<HTMLTextAreaElement | null>
   placeholder: string
@@ -56,6 +58,8 @@ export function ChatInput(props: ChatInputProps) {
     onCancelRecording,
     onSelectTool,
     onRemoveSelectedTool,
+    onScrollToTop,
+    onScrollToBottom,
     toolsContainerRef,
     textareaRef,
     placeholder,
@@ -72,7 +76,7 @@ export function ChatInput(props: ChatInputProps) {
   return (
     <div className="p-4 bg-transparent max-w-3xl w-[75%] bottom-0 fixed relative place-self-center">
       {isToolsOpen && hasCurrentAgentTools ? (
-        <div ref={toolsContainerRef} className="mb-3 rounded-md border border-border bg-card p-2 shadow-sm" onClick={(e) => e.stopPropagation()}>
+        <div ref={toolsContainerRef} className="mb-3 rounded-xl glass-card p-2 shadow-lg" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between px-2 py-1">
             <div className="text-xs text-muted-foreground">Tools</div>
             <Button
@@ -104,7 +108,7 @@ export function ChatInput(props: ChatInputProps) {
         </div>
       ) : null}
 
-      <div className="relative border border-border rounded-lg bg-background hover:border-ring transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring mb-3">
+      <div className="relative glass-input rounded-xl hover:border-ring transition-all duration-300 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/50 mb-3">
         <div className="flex items-end p-3 gap-2">
           <Textarea
             ref={textareaRef}
@@ -131,7 +135,7 @@ export function ChatInput(props: ChatInputProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 w-7 p-0 rounded-full"
+                className="h-7 w-7 p-0 rounded-full hover:text-primary"
                 onClick={(e) => {
                   e.stopPropagation()
                   setIsToolsOpen(true)
@@ -140,6 +144,30 @@ export function ChatInput(props: ChatInputProps) {
                 title="Show tools"
               >
                 <Plus className="h-3 w-3" />
+              </Button>
+            )}
+
+            {onScrollToTop && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 w-7 p-0 rounded-full hover:text-primary"
+                onClick={onScrollToTop}
+                title="Scroll to top"
+              >
+                <ArrowUp className="h-3 w-3" />
+              </Button>
+            )}
+
+            {onScrollToBottom && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 w-7 p-0 rounded-full hover:text-primary"
+                onClick={onScrollToBottom}
+                title="Scroll to bottom"
+              >
+                <ArrowDown className="h-3 w-3" />
               </Button>
             )}
 
@@ -164,7 +192,7 @@ export function ChatInput(props: ChatInputProps) {
               disabled={isLoading || isTranscribing}
               size="sm"
               variant={isRecording ? "destructive" : "outline"}
-              className="h-8 w-8 p-0 shrink-0"
+              className="h-8 w-8 p-0 shrink-0 hover:text-primary"
             >
               {isRecording ? (
                 <MicOff className="h-3 w-3" />

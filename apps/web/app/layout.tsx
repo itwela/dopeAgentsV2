@@ -4,6 +4,7 @@ import "./globals.css";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import ConvexClientProvider from "./providers/ConvexClientProvider";
 import AgentChatWrapper from "./providers/AgentChatWrapper";
+import { UserDataProvider } from "../components/providers/userDataProvider";
 
 
 export const metadata: Metadata = {
@@ -23,13 +24,15 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`antialiased`}
+        className={`antialiased min-h-screen`}
         >
         <ConvexAuthNextjsServerProvider>
             <ConvexClientProvider>
-              <AgentChatWrapper>
-                {children}
-              </AgentChatWrapper>
+              <UserDataProvider>
+                <AgentChatWrapper>
+                  {children}
+                </AgentChatWrapper>
+              </UserDataProvider>
             </ConvexClientProvider>
         </ConvexAuthNextjsServerProvider>
       </body>

@@ -36,7 +36,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
-            const allowed = ['steve', 'hermes'];
+            const allowed = ['steve', 'hermes', 'dope-admin'];
             const filtered = (data.data || []).filter((agent: ChatAgent) => {
               const name = agent?.name?.toLowerCase?.();
               const id = agent?.id?.toLowerCase?.();
@@ -121,7 +121,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <AppSidebar />
       <SidebarRail />
       <SidebarInset>
-        <header className="sticky top-0 z-30 flex h-12 items-center justify-between gap-2 border-b bg-background px-4 md:px-6">
+        <header className="sticky top-0 z-30 flex h-12 items-center justify-between gap-2 border-b glass-sidebar px-4 md:px-6">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <SidebarTrigger className="md:hidden" />
             <Image src="/character.png" alt="Dope Agents" width={16} height={16} className="flex-shrink-0" />
@@ -182,7 +182,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               <MoreHorizontal className="h-4 w-4" />
             </Button>
             {showDropdown && (
-              <div className="dropdown-menu absolute right-0 top-9 z-50 w-48 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+              <div className="dropdown-menu absolute right-0 top-9 z-50 w-48 rounded-xl glass-dropdown p-1 text-popover-foreground shadow-lg">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -211,8 +211,11 @@ export function MainLayout({ children }: MainLayoutProps) {
             )}
           </div>
         </header>
-        <main className="flex-1 min-h-0 p-4 md:p-6">
-          {children}
+        <main className="flex-1 min-h-0 p-4 md:p-6 relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-50/20 via-red-100/10 to-red-200/20 pointer-events-none" />
+          <div className="relative z-10">
+            {children}
+          </div>
         </main>
       </SidebarInset>
       

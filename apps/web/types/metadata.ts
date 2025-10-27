@@ -40,7 +40,7 @@ export interface FaqMetadata extends BaseMetadata {
 
 export interface CompanyKnowledgeMetadata extends BaseMetadata {
   department: 'engineering' | 'sales' | 'marketing' | 'hr' | 'finance' | 'legal' | 'operations' | 'other';
-  documentType?: 'policy' | 'procedure' | 'guideline' | 'training' | 'reference' | 'other';
+  documentType?: 'policy' | 'procedure' | 'guideline' | 'training' | 'reference' | 'key-information' | 'other';
   accessLevel?: 'public' | 'internal' | 'restricted' | 'confidential';
   version?: string;
   approver?: string;
@@ -115,6 +115,7 @@ export const INDEX_TYPES = {
 
 export type IndexType = keyof typeof INDEX_TYPES;
 
+// REVIEW: This function is used to get the metadata fields for an index.
 export function getMetadataFieldsForIndex(indexName: string): string[] {
   switch (indexName) {
     case 'dope-email-templates':

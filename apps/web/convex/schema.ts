@@ -51,12 +51,26 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_employee_id", ["employeeId"]),
+  // Projects to organize threads (optional association)
+  projects: defineTable({
+    projectId: v.string(),
+    userId: v.optional(v.string()),
+    userName: v.optional(v.string()),
+    name: v.string(),
+    description: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_project_id", ["projectId"]) 
+    .index("by_user_id", ["userId"]) 
+    .index("by_user_name", ["userName"]),
   conversationThreads: defineTable({
     threadId: v.string(),
     userId: v.optional(v.string()),
     userName: v.optional(v.string()), // User's actual name for filtering
     agentId: v.string(),
     title: v.string(),
+    projectId: v.optional(v.string()),
     history: v.array(v.any()), // AgentInputItem[]
     lastUpdated: v.number(),
     createdAt: v.number(),
@@ -64,7 +78,8 @@ export default defineSchema({
     .index("by_thread_id", ["threadId"])
     .index("by_user_id", ["userId"])
     .index("by_user_name", ["userName"])
-    .index("by_agent_id", ["agentId"]),
+    .index("by_agent_id", ["agentId"]) 
+    .index("by_project_id", ["projectId"]),
   dopeActiveAccounts: defineTable({
     account_id: v.optional(v.string()),
     hubspot_id: v.optional(v.string()),
@@ -91,4 +106,55 @@ export default defineSchema({
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
   }).index("by_account_name", ["account_name"]),
+  
+  // Workflow system tables
+  workflowRuns: defineTable({
+    workflowRunId: v.string(),
+    userId: v.optional(v.string()),
+    userName: v.optional(v.string()),
+    title: v.string(),
+    clientName: v.optional(v.string()),
+    threadId: v.optional(v.string()),
+    status: v.string(), // running, completed, failed
+    createdAt: v.number(),
+    completedAt: v.optional(v.number()),
+    metadata: v.optional(v.any()),
+  })
+    .index("by_workflow_run_id", ["workflowRunId"])
+    .index("by_user_id", ["userId"])
+    .index("by_user_name", ["userName"])
+    .index("by_thread_id", ["threadId"])
+    .index("by_status", ["status"])
+    .index("by_client_name", ["clientName"]),
+    
+  workflowResults: defineTable({
+    workflowRunId: v.string(),
+    userId: v.optional(v.string()),
+    userName: v.optional(v.string()),
+    stepNumber: v.number(),
+    agentName: v.string(),
+    stepTitle: v.string(),
+    response: v.string(),
+    timestamp: v.number(),
+    threadId: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+  })
+    .index("by_workflow_run_id", ["workflowRunId"])
+    .index("by_user_id", ["userId"])
+    .index("by_user_name", ["userName"])
+    .index("by_thread_id", ["threadId"])
+    .index("by_workflow_run_and_step", ["workflowRunId", "stepNumber"]),
+
+  // Clients table for workflow management
+  clients: defineTable({
+    clientId: v.string(),
+    userId: v.string(),
+    userName: v.string(),
+    name: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_client_id", ["clientId"])
+    .index("by_user_id", ["userId"])
+    .index("by_user_name", ["userName"]),
 });

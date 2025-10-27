@@ -1,29 +1,25 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react";
+import { useMutation, useQuery } from "convex/react";
+import { motion } from "framer-motion";
+import { ArrowRight, BarChart3, Bot, Brain, Check, ChevronDown, ChevronRight, Copy, Database, Settings, User } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Button } from "./ui/button";
-import { Textarea } from "./ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Badge } from "./ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { ScrollArea } from "./ui/scroll-area";
-import { Send, Bot, User, Loader2, RefreshCw, Copy, Check, Settings, Mic, MicOff, X, ChevronDown, ChevronRight, Info, Database, BarChart3, Users, FileText, Globe, Search, Brain, Target, TrendingUp, MessageSquare, Lightbulb, Shield, Cpu, Activity, ArrowRight, ExternalLink, Plus, MoreHorizontal } from "lucide-react";
-import { ChatInput } from "./chat-input";
-import AITextLoading from "./ui/ai-text-loading";
-import { useAgentChat } from "./providers/agent-chat-provider";
-import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
+import { AgentChatProps, ChatAgent, ChatMessage, PromptCardData } from "../interfaces/agentChatInterfaces";
 import { AgentInfoModal } from "./agent-info-modal";
+import { AgentHeader } from "./agentHeader";
+import { AgentSelector } from "./agentSelector";
+import { ChatInput } from "./chat-input";
 import { KnowledgeBaseDropdown } from "./knowledge-base-dropdown";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { ChatMessage, ChatAgent, AgentChatProps, PromptCardData, EmailOutreachFormValues } from "../interfaces/agentChatInterfaces";
-import { AuroraText } from "./ui/aurora-text";
-import { TextAnimate } from "./ui/text-animate";
-import { motion } from "framer-motion";
-
+import { useAgentChat } from "./providers/agent-chat-provider";
+import "./specialCSSClasses.css";
+import AITextLoading from "./ui/ai-text-loading";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Card, CardContent } from "./ui/card";
+import { ScrollArea } from "./ui/scroll-area";
 
 // Helper function to extract content from messages
 const extractContent = (content: any): string => {
@@ -40,6 +36,11 @@ const extractContent = (content: any): string => {
     return JSON.stringify(content);
   }
   return String(content || '');
+};
+
+// Function to get display name for a tool
+const getToolDisplayName = (toolName: string): string => {
+  return TOOL_DISPLAY_NAMES[toolName] || toolName;
 };
 
 // Tool display names mapping for cleaner user interface
@@ -75,72 +76,20 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   'dope_active_account_upsert': '➕ Add Account',
 
   // Web Tools
-  'web_search': '🌐 Web Search'
+  'web_search': '🌐 Web Search',
+  
+  // MongoDB MCP Tools
+  'mongodb_list_collections': '🗄️ List Collections',
+  'mongodb_find': '🔍 Find Documents',
+  'mongodb_aggregate': '📊 Aggregate Data',
+  'mongodb_collection_schema': '📋 Collection Schema',
+  'mongodb_insert': '➕ Insert Document',
+  'mongodb_update': '✏️ Update Document',
+  'mongodb_delete': '🗑️ Delete Document',
+  'mongodb_count': '🔢 Count Documents',
 };
 
-// Function to get display name for a tool
-const getToolDisplayName = (toolName: string): string => {
-  return TOOL_DISPLAY_NAMES[toolName] || toolName;
-};
-
-const PROMPT_EMAIL_GENERATION: PromptCardData = {
-  id: 'email',
-  title: 'Business Analysis',
-  prompt: 'I need you to perform a step-by-step business analysis. Please provide the business website, ZIP code, business name, and contact name. I\'ll start with Step 1 (business data extraction) and ask for your confirmation before proceeding to each next step.',
-};
-
-const PROMPT_TRANSCRIPT_TO_SUMMARY: PromptCardData = {
-  id: 'transcript',
-  title: 'Transcript → Clean Summary',
-  prompt: `You are given raw JSON or structured meeting/transcript data.
-Your job is to reformat the data into a clean, copy-friendly structure with these rules:
-
-Output should be plain text, not JSON.
-
-Each field should follow the format:
-
-key: text
-
-No quotes
-No curly braces
-No brackets
-
-Multi-value fields (like action items, participants, topics) should be written as a list using - bullets under the field name.
-Example:
-
-action_items:
-- Task one
-- Task two
-
-Preserve all useful information (ids, titles, participants, topics, keywords, technologies, etc.).
-Keep readability high — use commas for inline lists, bullets for multi-line lists.
-
-Use exactly these fields:
-
-title: best-fit title (improve it if needed)
-Meeting Type: interview, call, meeting, presentation, other
-Duration: [duration]
-Participants: name1, name2, name3
-Location: [location or 'Google Meet']
-Department: marketing, sales, hr, finance, legal, operations, other
-Confidentiality Level: internal, public, confidential, restricted
-Action_items:
-- [bullet]
-- [bullet]
-Concepts_discussed:
-- [bullet]
-Date: [YYYY-MM-DD or best guess]
-Key_topics:
-- [bullet]
-Summary: [3-5 sentence summary]
-tags: tag1, tag2, tag3 (max 6)
-type: [short type label]`,
-};
-
-const PRESET_PROMPTS: PromptCardData[] = [
-  PROMPT_EMAIL_GENERATION,
-  PROMPT_TRANSCRIPT_TO_SUMMARY,
-];
+const PRESET_PROMPTS: PromptCardData[] = [];
 
 // Style guide used for post-processing of AI responses
 const STYLE_GUIDE_PROMPT = `Always format your output for clarity, readability, and visual impact, using Markdown. Adopt a structured, actionable layout with distinct sections, bolding, emojis, bullet points, and tables as demonstrated.
@@ -156,67 +105,9 @@ Tone: Maintain a confident, helpful, professional tone.
 
 Critical rule: Do NOT alter the underlying facts or meaning. Only improve formatting and organization.`;
 
-
-function PromptCard({ data, onSelect }: { data: PromptCardData; onSelect: (text: string) => void }) {
-  return (
-    <button
-      className="rounded-lg border border-border/60 bg-card hover:bg-accent/10 transition-colors text-left p-4"
-      onClick={() => onSelect(data.prompt)}
-    >
-      <div className="text-sm font-medium text-foreground">{data.title}</div>
-      <div className="text-xs mt-1 text-muted-foreground line-clamp-2">{data.prompt}</div>
-    </button>
-  );
-}
-
-function EmailOutreachForm({ initial, onSubmit, onCancel }: {
-  initial?: Partial<EmailOutreachFormValues>;
-  onSubmit: (values: EmailOutreachFormValues) => void;
-  onCancel?: () => void;
-}) {
-  const [form, setForm] = useState<EmailOutreachFormValues>({
-    companyName: initial?.companyName || '',
-    websiteUrl: initial?.websiteUrl || '',
-    contactName: initial?.contactName || '',
-    zipCode: initial?.zipCode || '',
-  });
-
-  const handleChange = (field: keyof EmailOutreachFormValues, value: string) => {
-    setForm(prev => ({ ...prev, [field]: value }));
-  };
-
-  return (
-    <div className="rounded-lg p-4 border border-border bg-card">
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="companyName">Company Name</Label>
-          <Input id="companyName" value={form.companyName} onChange={(e) => handleChange('companyName', e.target.value)} placeholder="Acme Co." />
-        </div>
-        <div>
-          <Label htmlFor="websiteUrl">Website URL</Label>
-          <Input id="websiteUrl" value={form.websiteUrl} onChange={(e) => handleChange('websiteUrl', e.target.value)} placeholder="https://example.com" />
-        </div>
-        <div>
-          <Label htmlFor="contactName">Primary Contact Name</Label>
-          <Input id="contactName" value={form.contactName} onChange={(e) => handleChange('contactName', e.target.value)} placeholder="Jane Doe" />
-        </div>
-        <div>
-          <Label htmlFor="zipCode">Business ZIP Code (for market analysis)</Label>
-          <Input id="zipCode" value={form.zipCode} onChange={(e) => handleChange('zipCode', e.target.value)} placeholder="55117" maxLength={5} />
-        </div>
-      </div>
-      <div className="mt-4 flex gap-2 justify-end">
-        {onCancel && (
-          <Button variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
-        )}
-        <Button size="sm" onClick={() => onSubmit(form)}>Use These Details</Button>
-      </div>
-    </div>
-  );
-}
-
 export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange, hasMessages = false }: AgentChatProps) {
+  // Hide scrollbars globally but keep scroll functionality
+
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -272,8 +163,6 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const toolsContainerRef = useRef<HTMLDivElement>(null);
-  const [showEmailForm, setShowEmailForm] = useState(false);
-  const [emailFlowMessageStartIndex, setEmailFlowMessageStartIndex] = useState<number | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
   const [thinkingStartTime, setThinkingStartTime] = useState<Date | null>(null);
   const [thinkingDuration, setThinkingDuration] = useState<number>(0);
@@ -284,6 +173,15 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
   const [currentTitleOverride, setCurrentTitleOverride] = useState<string>('');
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const currentAgentInfo = availableAgents.find(agent => agent.id === currentAgent);
+  // Derived booleans for readability
+  const hasCurrentAgentTools = Boolean(currentAgentInfo?.tools && currentAgentInfo.tools.length > 0);
+  // Check if we have user messages (excluding system messages)
+  const userMessages = messages.filter(msg => msg.role === 'user');
+  const hasUserMessages = userMessages.length > 0;
+
 
   useEffect(() => {
     fetchAvailableAgents();
@@ -341,13 +239,25 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+  const scrollToTop = () => {
+    const scrollViewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (scrollViewport) {
+      scrollViewport.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+  const scrollToBottomManual = () => {
+    const scrollViewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (scrollViewport) {
+      scrollViewport.scrollTo({ top: scrollViewport.scrollHeight, behavior: "smooth" });
+    }
+  };
   const fetchAvailableAgents = async () => {
     try {
       const response = await fetch('/api/agents/chat');
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          const allowed = ['steve', 'hermes'];
+          const allowed = ['steve', 'hermes', 'dope-admin'];
           const filtered = (data.data || []).filter((agent: ChatAgent) => {
             const name = agent?.name?.toLowerCase?.();
             const id = agent?.id?.toLowerCase?.();
@@ -597,14 +507,11 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
       return updatedTools;
     });
   };
-
   const removeSelectedTool = (tool: string) => {
     setSelectedTools([]);
   };
   // Fully reset local UI state to initial prompt-cards view
   const resetUIState = () => {
-    setShowEmailForm(false);
-    setEmailFlowMessageStartIndex(null);
     setSelectedTools([]);
     setIsToolsOpen(false);
     setIsEditingTitle(false);
@@ -616,25 +523,6 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
     setShouldAutoScroll(false);
     setExpandedToolCalls(new Set());
     setExpandedToolResults(new Set());
-  };
-  const insertFakeThreadWithForm = (title: string, userPrompt: string) => {
-    const startIndex = messages.length;
-    const fakeUserMessage: ChatMessage = {
-      role: 'user',
-      content: userPrompt,
-      timestamp: new Date(),
-    };
-    const assistantIntro: ChatMessage = {
-      role: 'assistant',
-      content: `${title} — please provide the details below to proceed.`,
-      agentName: currentAgentInfo?.name || 'Hermes',
-      timestamp: new Date(),
-    };
-    addMessage(fakeUserMessage);
-    addMessage(assistantIntro);
-    setShowEmailForm(true);
-    setShouldAutoScroll(true);
-    setEmailFlowMessageStartIndex(startIndex);
   };
   const startRecording = async () => {
     try {
@@ -720,32 +608,27 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
   const getMessageBgColor = (role: string) => {
     switch (role) {
       case 'user':
-        return 'bg-muted foreground ml-12';
+        return 'glass-user-message text-black ml-12';
       case 'assistant':
-        return 'mr-12';
+        return 'bg-transparent mr-12';
       case 'system':
-        return 'bg-secondary mx-12 text-center';
+        return 'bg-transparent mx-12 text-center';
       default:
-        return 'bg-muted mr-12';
+        return 'bg-transparent mr-12';
     }
   };
-
-  const currentAgentInfo = availableAgents.find(agent => agent.id === currentAgent);
-  // Derived booleans for readability
-  const hasCurrentAgentTools = Boolean(currentAgentInfo?.tools && currentAgentInfo.tools.length > 0);
-
 
   const isAssistant = (role: string) => role === 'assistant';
   const isUser = (role: string) => role === 'user';
   const isSystem = (role: string) => role === 'system';
   const isNoUserMessages = messages.filter(msg => msg.role === 'user').length === 0;
   const canShowToolsDropdown = !isLoading && hasCurrentAgentTools;
+  
   const isLastMessageAssistantFromCurrent = () => {
     if (messages.length === 0) return false;
     const last = messages[messages.length - 1];
     return isAssistant(last.role) && (last.agentName === (currentAgentInfo?.name || 'Hermes'));
   };
-
   const toggleToolCallsExpansion = (messageIndex: number) => {
     const newExpanded = new Set(expandedToolCalls);
     if (newExpanded.has(messageIndex)) {
@@ -755,7 +638,6 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
     }
     setExpandedToolCalls(newExpanded);
   };
-
   const toggleToolResultExpansion = (messageIndex: number) => {
     const newExpanded = new Set(expandedToolResults);
     if (newExpanded.has(messageIndex)) {
@@ -994,11 +876,8 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
     );
   };
 
-  // Check if we have user messages (excluding system messages)
-  const userMessages = messages.filter(msg => msg.role === 'user');
-  const hasUserMessages = userMessages.length > 0;
 
-  if (!hasUserMessages && !showEmailForm) {
+  if (!hasUserMessages) {
     // Simple view when no messages and email form is not open - just agent name and input
     return (
       <>
@@ -1008,70 +887,21 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
           initial="hidden"
           animate="visible"
         >
-          {/* Agent Name */}
-          <div className="mb-8 text-center">
-            <h1 className="text-2xl font-bold text-foreground mb-2 flex items-center justify-center gap-2">
-              <AuroraText className="text-3xl">
-                {currentAgentInfo?.name || currentAgent.charAt(0).toUpperCase() + currentAgent.slice(1)}
-              </AuroraText>
-              <Badge variant="secondary" className="text-xs">Account Manager</Badge>
-            </h1>
-            <TextAnimate animation="fadeIn" by="word" duration={0.8} delay={0.3}>
-              <p className="text-muted-foreground">
-                {currentAgentInfo?.name?.toLowerCase() === 'hermes'
-                  ? 'Hermes is optimized as an account manager assistant: summarizing health, prepping QBRs, and surfacing upsell opportunities.'
-                  : (currentAgentInfo?.description || 'AI Assistant')}
-              </p>
-            </TextAnimate>
-          </div>
+          {/* NOTE Agent Name */}
+          <AgentHeader 
+            agentName={currentAgentInfo?.name || currentAgent.charAt(0).toUpperCase() + currentAgent.slice(1)}
+            agentDescription={currentAgentInfo?.description}
+          />
 
-          {/* Agent Selection */}
-          <motion.div className="mb-6 flex items-center gap-3" variants={elementVariants}>
-            <Select value={currentAgent} onValueChange={setCurrentAgent}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Select agent" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableAgents.map((agent) => (
-                  <SelectItem key={agent.id} value={agent.id}>
-                    {agent.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* NOTE Agent Selection */}
+          <AgentSelector
+            currentAgent={currentAgent}
+            availableAgents={availableAgents}
+            onAgentChange={setCurrentAgent}
+            onInfoClick={() => setShowInfoModal(true)}
+            elementVariants={elementVariants}
+          />
 
-            {/* Info Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowInfoModal(true)}
-              title="Agent Information & Tools"
-              className="h-9 w-9 p-0"
-            >
-              <Info className="h-4 w-4" />
-            </Button>
-          </motion.div>
-
-          {/* Preset Prompt Cards for Account Managers */}
-          <motion.div className="mb-10 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-3xl px-4 max-h-64 overflow-y-auto" variants={elementVariants}>
-            {PRESET_PROMPTS.map((card) => (
-              <PromptCard
-                key={card.title}
-                data={card}
-                onSelect={(text) => {
-                  if (card.id === 'email') {
-                    insertFakeThreadWithForm(card.title, text);
-                  } else {
-                    setInput(text);
-                    if (textareaRef.current) {
-                      textareaRef.current.focus();
-                      autoResizeTextarea();
-                    }
-                  }
-                }}
-              />
-            ))}
-          </motion.div>
 
             <motion.div variants={elementVariants} className="w-full">
               <ChatInput
@@ -1125,18 +955,18 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
     <>
 
 
-      <Card className={`flex  flex-col h-full w-full flex items-center justify-center border-none ${className} bg-transparent`}>
+      <Card className={`flex flex-col h-full w-full flex items-center justify-center border-none ${className} bg-transparent`}>
 
-        <CardContent className="items-center lg:w-[80%] flex flex-col p-0  h-[100%] overflow-hidden">
+        <CardContent className="items-center  lg:w-[80%] flex flex-col p-0  h-[100%] overflow-hidden">
           {lastError && (
             <div className="w-full max-w-4xl mb-3 rounded border border-destructive/40 bg-destructive/10 text-destructive px-3 py-2 text-sm">
               {lastError}
             </div>
           )}
           {/* Messages */}
-          <ScrollArea className="h-full  w-full place-self-center">
+          <ScrollArea ref={scrollAreaRef} className="h-full w-full  place-self-center" >
 
-            <div className="space-y-4 overflow-y-scroll w-full w-[80%]">
+            <div className="space-y-4 w-full w-[80%]  hide-scrollbar">
 
               {messages.map((message, index) => {
                 // Handle tool result messages with collapsible UI
@@ -1198,68 +1028,9 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
                   );
                 }
                 
-                if (showEmailForm && index === messages.length - 1 && isAssistant(message.role) && isLastMessageAssistantFromCurrent()) {
-                  // Render inline form as a chat message right after assistant intro
-                  return (
-                    <div key={index} className={`flex flex-col ${'max-w-full place-self-start'}`}>
-                      <div className={`rounded-lg p-3 ${getMessageBgColor('assistant')}`}>
-                        <div className="flex items-start gap-2">
-                          <div className="mt-0.5">
-                            {getMessageIcon('assistant')}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              {message.agentName && (
-                                <span className="text-xs font-medium opacity-70 text-red-600">
-                                {message.agentName}
-                                </span>
-                              )}
-                              <span className="text-xs opacity-50">{message.timestamp.toLocaleTimeString()}</span>
-                            </div>
-                            <div className="text-sm">
-                              <EmailOutreachForm
-                                onSubmit={(values) => {
-                                  // Compose directive for step-by-step business analysis
-                                  const directive = [
-                                    'I need you to perform a step-by-step business analysis for this client.',
-                                    '',
-                                    'Your goal is to generate a strategic analysis that:',
-                                    '1. Establishes Dope Marketing\'s authority by demonstrating deep understanding of the client\'s market',
-                                    '2. Acts as a powerful conversation starter that compels the client to get on a call or request a full proposal',
-                                    '',
-                                    'Please start with Step 1 (business data extraction) using these details:',
-                                    '',
-                                    `**Business Website:** ${values.websiteUrl}`,
-                                    `**Business ZIP Code:** ${values.zipCode}`,
-                                    `**Business Name:** ${values.companyName || 'Not provided'}`,
-                                    `**Primary Contact:** ${values.contactName || 'Not provided'}`,
-                                    '',
-                                    'After Step 1 completes, ask me if I want to proceed with Step 2, then Step 3.',
-                                  ].join('\n');
 
-                                  // Send the analysis request
-                                  sendMessage(directive);
-                                  setShowEmailForm(false);
-                                  setShouldAutoScroll(true);
-                                }}
-                                onCancel={() => {
-                                  // Restore to the state prior to entering the flow
-                                  if (emailFlowMessageStartIndex !== null) {
-                                    setMessages(messages.slice(0, emailFlowMessageStartIndex));
-                                  }
-                                  setShowEmailForm(false);
-                                  setEmailFlowMessageStartIndex(null);
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
                 return (
-                  <div key={index} className={`flex flex-col ${message.role === 'user' ? 'max-w-[50%] place-self-end p-1 break-words' : 'max-w-[95%] place-self-start p-1 break-words'}`}>
+                  <div key={index} className={`flex  flex-col ${message.role === 'user' ? 'max-w-[50%] place-self-end p-1 break-words' : 'max-w-[95%] place-self-start p-1 break-words'}`}>
                     <div className={`rounded-lg p-3 ${getMessageBgColor(message.role)}`}>
                       <div className="flex items-start gap-2">
                         {message.role !== 'system' && (
@@ -1278,6 +1049,7 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
                               {message.timestamp.toLocaleTimeString()}
                             </span>
                           </div>
+
                           <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
                             <ReactMarkdown
                               remarkPlugins={[remarkGfm]}
@@ -1419,6 +1191,8 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
               onCancelRecording={cancelRecording}
               onSelectTool={handleSelectTool}
               onRemoveSelectedTool={removeSelectedTool}
+              onScrollToTop={scrollToTop}
+              onScrollToBottom={scrollToBottomManual}
               toolsContainerRef={toolsContainerRef}
               textareaRef={textareaRef}
               placeholder="Type your message..."
