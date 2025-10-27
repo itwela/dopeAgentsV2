@@ -20,6 +20,7 @@ import { useUserData } from "../../components/providers/userDataProvider";
 import { WorkflowFormModal, WorkflowFormData } from "../../components/workflow-form-modal";
 import { Timeline } from "../../components/ui/timeline";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { motion } from "framer-motion";
 
 // Predefined workflow templates
 const WORKFLOW_TEMPLATES = [
@@ -417,7 +418,19 @@ export default function WorkflowsPage() {
         )}
 
         {/* Clients Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+        <motion.div 
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            visible: {
+              transition: {
+                staggerChildren: 0.08,
+                delayChildren: 0.1
+              }
+            }
+          }}
+        >
           {(() => {
             // Combine real clients with empty slots to always show 8 cards
             const realClients = clients || [];
@@ -439,8 +452,20 @@ export default function WorkflowsPage() {
               const workflowCount = clientWorkflowCounts?.[client.name] || 0;
               
               return (
-                <div 
+                <motion.div
                   key={client.clientId || client._id}
+                  variants={{
+                    hidden: { opacity: 0, y: -20 },
+                    visible: { 
+                      opacity: 1, 
+                      y: 0,
+                      transition: {
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 25
+                      }
+                    }
+                  }}
                   className={`bg-background border rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer ${
                     isSelected ? 'ring-2 ring-primary' : ''
                   }`}
@@ -468,11 +493,11 @@ export default function WorkflowsPage() {
                       }
                     </p>
                   </div>
-                </div>
+                </motion.div>
               );
             });
           })()}
-        </div>
+        </motion.div>
 
 
         {/* Client Workflows - Only show when client is selected */}

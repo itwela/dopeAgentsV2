@@ -25,7 +25,7 @@ export function AgentSelector({
         <SelectTrigger className="w-48">
           <SelectValue placeholder="Select agent" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-white border-solid">
           {availableAgents.map((agent) => (
             <SelectItem key={agent.id} value={agent.id}>
               {agent.name}
@@ -40,7 +40,7 @@ export function AgentSelector({
         size="sm"
         onClick={onInfoClick}
         title="Agent Information & Tools"
-        className="h-9 w-9 p-0"
+        className="h-9 w-9 p-0 hover:text-primary"
       >
         <Info className="h-4 w-4" />
       </Button>

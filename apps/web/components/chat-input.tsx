@@ -7,6 +7,7 @@ import { Badge } from "./ui/badge"
 import { Label } from "./ui/label"
 import { Plus, Check, X, Mic, MicOff, Loader2, Send, ArrowUp, ArrowDown } from "lucide-react"
 import { TextAnimate } from "./ui/text-animate"
+import { motion } from "framer-motion"
 
 type AgentInfo = {
   tools: string[]
@@ -75,6 +76,8 @@ export function ChatInput(props: ChatInputProps) {
 
   return (
     <div className="p-4 bg-transparent max-w-3xl w-[75%] bottom-0 fixed relative place-self-center">
+      
+      {/* NOTE: Tools Dropdown */}
       {isToolsOpen && hasCurrentAgentTools ? (
         <div ref={toolsContainerRef} className="mb-3 rounded-xl glass-card p-2 shadow-lg" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between px-2 py-1">
@@ -82,29 +85,56 @@ export function ChatInput(props: ChatInputProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 px-2 text-xs"
+              className="h-6 px-2 text-xs hover:text-primary"
               onClick={() => setIsToolsOpen(false)}
               disabled={isLoading}
             >
               Hide
             </Button>
           </div>
-          <div className="mt-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1">
+          <motion.div 
+            className="mt-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              visible: {
+                transition: {
+                  staggerChildren: 0.08,
+                  delayChildren: 0.1
+                }
+              }
+            }}
+          >
             {currentAgentInfo!.tools.map((tool) => (
-              <Button
+              <motion.div
                 key={tool}
-                variant={selectedTools.includes(tool) ? "default" : "outline"}
-                size="sm"
-                className="justify-start text-xs h-8"
-                onClick={() => onSelectTool(tool)}
-                disabled={isLoading}
-                title={tool}
+                variants={{
+                  hidden: { opacity: 0, y: -20 },
+                  visible: { 
+                    opacity: 1, 
+                    y: 0,
+                    transition: {
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 25
+                    }
+                  }
+                }}
               >
-                {getToolDisplayName(tool)}
-                {selectedTools.includes(tool) && <Check className="h-3 w-3 ml-1" />}
-              </Button>
+                <Button
+                  variant={selectedTools.includes(tool) ? "default" : "outline"}
+                  size="sm"
+                  className="justify-start text-xs h-8 hover:text-primary w-full"
+                  onClick={() => onSelectTool(tool)}
+                  disabled={isLoading}
+                  title={tool}
+                >
+                  {getToolDisplayName(tool)}
+                  {selectedTools.includes(tool) && <Check className="h-3 w-3 ml-1" />}
+                </Button>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       ) : null}
 

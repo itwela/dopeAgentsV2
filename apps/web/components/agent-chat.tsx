@@ -161,7 +161,7 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
   const [showInfoModal, setShowInfoModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [isToolsOpen, setIsToolsOpen] = useState(false);
+  const [isToolsOpen, setIsToolsOpen] = useState(true);
   const toolsContainerRef = useRef<HTMLDivElement>(null);
   const [lastError, setLastError] = useState<string | null>(null);
   const [thinkingStartTime, setThinkingStartTime] = useState<Date | null>(null);
@@ -217,7 +217,12 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (toolsContainerRef.current && !toolsContainerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      // Don't close if clicking on the textarea, input area, or inside the tools container
+      if (textareaRef.current && (textareaRef.current.contains(target) || textareaRef.current === target)) {
+        return;
+      }
+      if (toolsContainerRef.current && !toolsContainerRef.current.contains(target)) {
         setIsToolsOpen(false);
       }
     };
@@ -513,7 +518,7 @@ export function AgentChat({ initialAgent = 'hermes', className, onMessagesChange
   // Fully reset local UI state to initial prompt-cards view
   const resetUIState = () => {
     setSelectedTools([]);
-    setIsToolsOpen(false);
+    setIsToolsOpen(true); // Keep tools open by default
     setIsEditingTitle(false);
     setTitleDraft('');
     setCurrentTitleOverride('');

@@ -9,6 +9,15 @@ interface AgentHeaderProps {
 
 export function AgentHeader({ agentName, agentDescription }: AgentHeaderProps) {
   const isHermes = agentName?.toLowerCase() === 'hermes';
+  const isSteve = agentName?.toLowerCase() === 'steve';
+  const isDopeAdmin = agentName?.toLowerCase() === 'dope admin' || agentName?.toLowerCase() === 'dopeadmin';
+  
+  const getRoleBadge = () => {
+    if (isHermes) return 'Account Manager';
+    if (isSteve) return 'Leadership';
+    if (isDopeAdmin) return 'Admin';
+    return 'AI Assistant';
+  };
   
   return (
     <div className="mb-8 text-center glass-float">
@@ -16,7 +25,7 @@ export function AgentHeader({ agentName, agentDescription }: AgentHeaderProps) {
         <AuroraText className="text-3xl">
           {agentName}
         </AuroraText>
-        <Badge variant="secondary" className="text-xs glass-button">Account Manager</Badge>
+        <Badge variant="secondary" className="text-xs glass-button">{getRoleBadge()}</Badge>
       </h1>
       {/* <TextAnimate animation="fadeIn" by="word" duration={0.8} delay={0.3}>
         <p className="text-muted-foreground">

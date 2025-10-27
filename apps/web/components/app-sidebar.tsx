@@ -77,7 +77,7 @@ export function AppSidebar() {
       <SidebarHeader className="border-b glass-sidebar">
         <div className="flex items-center justify-between">
           <div className="flex items-center justify-between w-full gap-2">
-            <SidebarTrigger className="hidden md:inline-flex h-8 w-8 p-0" />
+            <SidebarTrigger className="hidden md:inline-flex h-8 w-8 p-0 hover:text-primary" />
           </div>
           {/* Sign out moved to user menu in footer */}
         </div>

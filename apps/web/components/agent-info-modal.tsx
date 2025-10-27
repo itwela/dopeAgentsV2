@@ -110,7 +110,7 @@ export function AgentInfoModal({ isOpen, onClose, currentAgent, availableAgents 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="!w-[60vw] !max-w-none !h-[90vh] overflow-y-auto">
+      <DialogContent className="!w-[60vw] bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 !max-w-none !h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Info className="h-6 w-6" />
@@ -122,7 +122,7 @@ export function AgentInfoModal({ isOpen, onClose, currentAgent, availableAgents 
           {/* Current Agent Info - Left Side */}
           {currentAgentInfo && (
             <div className="space-y-6">
-              <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-950/20 rounded-xl p-6 border">
+              <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 rounded-xl p-6 border">
                 <div className="flex items-center gap-4 mb-4">
                   <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg">
                     <span className="text-2xl font-bold">
@@ -159,7 +159,7 @@ export function AgentInfoModal({ isOpen, onClose, currentAgent, availableAgents 
                       {currentAgentInfo.tools.map((tool) => {
                         const IconComponent = getToolIcon(tool);
                         return (
-                          <div key={tool} className="flex items-center gap-3 p-3 rounded-lg bg-white/70 dark:bg-gray-800/70 border border-border/50 hover:border-primary/50 transition-colors">
+                          <div key={tool} className="flex items-center gap-3 p-3 rounded-lg bg-white dark:bg-gray-800 border border-border hover:border-primary/50 transition-colors">
                             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
                               <IconComponent className="h-4 w-4 text-primary" />
                             </div>
@@ -221,7 +221,7 @@ export function AgentInfoModal({ isOpen, onClose, currentAgent, availableAgents 
                         {agent.tools.slice(0, 8).map((tool) => {
                           const IconComponent = getToolIcon(tool);
                           return (
-                            <div key={tool} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-muted/50 border border-border/30 hover:bg-muted/70 transition-colors">
+                            <div key={tool} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-muted border border-border hover:bg-muted-hover transition-colors">
                               <div className="flex h-4 w-4 items-center justify-center">
                                 <IconComponent className="h-3.5 w-3.5 text-muted-foreground" />
                               </div>
@@ -230,7 +230,7 @@ export function AgentInfoModal({ isOpen, onClose, currentAgent, availableAgents 
                           );
                         })}
                         {agent.tools.length > 8 && (
-                          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-muted/30 border border-dashed border-border/50">
+                          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-muted border border-dashed border-border">
                             <span className="text-xs text-muted-foreground font-medium">
                               +{agent.tools.length - 8} more
                             </span>
