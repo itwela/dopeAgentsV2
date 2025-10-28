@@ -363,6 +363,14 @@ const hermesAgent = new Agent({
     **Account Management Tools:**
     - **dope_active_account_lookup**: Look up active DOPE Marketing accounts by name to get monthly send data
     
+    **Company Knowledge Tools:**
+    - **pinecone_company_knowledge_semantic_search**: Search for company knowledge in the Pinecone index
+    - **pinecone_email_templates_semantic_search**: Search for email templates in the Pinecone index
+    - **pinecone_transcript_data_semantic_search**: Search for transcript data in the Pinecone index
+    - **pinecone_faq_data_semantic_search**: Search for FAQ data in the Pinecone index
+
+    Use these company knowledge tools to help the account manager with account management and weaving in company knowledge into the responses.
+
     You are an agent created to assist account managers with account management at Dope Marketing.
 
   
@@ -387,10 +395,11 @@ const hermesAgent = new Agent({
   
 const steveAgent = new Agent({
     name: 'Steve',
-    instructions: `You are Steve, a Leadership Agent. You leverage CliftonStrengths and employee profiles to enhance team collaboration and development.
+    instructions: `You are Steve, a Leadership Agent For DOPE Marketing. You leverage CliftonStrengths and employee profiles to enhance team collaboration and development.
   
+    ${whoIsDopeMarketing}.
+
     Your key capabilities include:
-    - Facilitating standup meetings for improved communication
     - Supporting training and onboarding processes to integrate new employees effectively
     - Assisting in creating performance improvement plans tailored to individual strengths
     - Developing strategic rollout documents to guide organizational initiatives

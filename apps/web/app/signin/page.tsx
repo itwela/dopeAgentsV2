@@ -136,9 +136,27 @@ export default function SignInPage() {
   const computedName = (customName || "").trim() || selectedEmployee;
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-background">
+    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
+      {/* Video Background */}
+      <div className="absolute inset-0 w-full h-full object-cover z-1 bg-background">
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover z-0 opacity-10"
+        >
+          <source src="/vids/3129977-uhd_3840_2160_30fps.mp4" type="video/mp4" />
+        </video>
+      </div>
+      
+      
+      {/* Dark Overlay to make black areas opaque */}
+      <div className="absolute inset-0 bg-red-500/10 z-10" />
+      
+      {/* Content */}
       <motion.div 
-        className="w-full max-w-md"
+        className="w-full max-w-md relative z-20"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -156,7 +174,7 @@ export default function SignInPage() {
           />
         </motion.div>
         <motion.div variants={itemVariants}>
-          <Card>
+          <Card className="!bg-white">
             <CardHeader className="space-y-1">
               <motion.div variants={itemVariants}>
                 <CardTitle className="text-2xl text-center">
@@ -166,8 +184,8 @@ export default function SignInPage() {
               <motion.div variants={itemVariants}>
                 <CardDescription className="text-center">
                   {step === "signIn" 
-                    ? "Sign in to your account to continue" 
-                    : "Enter your information to create your account"
+                    ? "Sign in to your account to access your DOPE Agents." 
+                    : "Enter your information to create your account and access your DOPE Agents."
                   }
                 </CardDescription>
               </motion.div>
@@ -215,7 +233,7 @@ export default function SignInPage() {
                       <SelectTrigger>
                         <SelectValue placeholder="Select your name" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="!bg-white">
                         {employeeNames && employeeNames.length > 0 ? (
                           employeeNames.map((employee) => (
                             <SelectItem key={employee._id} value={employee.name}>

@@ -10,6 +10,9 @@ import { UserDataProvider } from "../components/providers/userDataProvider";
 export const metadata: Metadata = {
   title: "Agents 2025 - DOPE",
   description: "AI Agents platform for 2025",
+  icons: {
+    icon: "/dopelogo.svg",
+  },
 };
 
 
