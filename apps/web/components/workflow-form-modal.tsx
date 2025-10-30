@@ -111,15 +111,20 @@ export function WorkflowFormModal({
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
           {/* Client Name */}
           <div className="space-y-2">
             <Label htmlFor="clientName">Client Name *</Label>
             <Input
               id="clientName"
+              name="client-name"
               value={formData.clientName}
               onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))}
               placeholder="Enter client name"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
               required
             />
           </div>
@@ -195,9 +200,14 @@ export function WorkflowFormModal({
                   <Label htmlFor="websiteUrl">Website URL <span className="text-muted-foreground text-xs">(if known)</span></Label>
                   <Input 
                     id="websiteUrl" 
+                    name="website-url"
                     value={formData.websiteUrl || ""} 
                     onChange={(e) => handleChange('websiteUrl', e.target.value)} 
                     placeholder="https://example.com" 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
                   />
                 </div>
 
@@ -206,9 +216,14 @@ export function WorkflowFormModal({
                   <Label htmlFor="industry">Industry <span className="text-red-500">*</span></Label>
                   <Input 
                     id="industry" 
+                    name="industry"
                     value={formData.industry || ""} 
                     onChange={(e) => handleChange('industry', e.target.value)} 
                     placeholder="e.g., Healthcare, Retail, etc." 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
                     required
                   />
                 </div>
@@ -221,9 +236,14 @@ export function WorkflowFormModal({
                     </Label>
                     <Input 
                       id="primaryLocation" 
+                      name="primary-location"
                       value={formData.primaryLocation || ""} 
                       onChange={(e) => handleChange('primaryLocation', e.target.value)} 
                       placeholder="ZIP code or full address" 
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
                       required={isPrimaryLocationRequired}
                     />
                   </div>
@@ -235,10 +255,12 @@ export function WorkflowFormModal({
                   <Input 
                     id="radius" 
                     type="number" 
+                    name="radius-miles"
                     value={formData.radius || "5"} 
                     onChange={(e) => handleChange('radius', e.target.value)} 
                     placeholder="5" 
                     min="1"
+                    autoComplete="off"
                   />
                 </div>
 
@@ -249,8 +271,10 @@ export function WorkflowFormModal({
                     <Input 
                       id="lastOrderDate" 
                       type="date"
+                      name="last-order-date"
                       value={formData.lastOrderDate || ""} 
                       onChange={(e) => handleChange('lastOrderDate', e.target.value)} 
+                      autoComplete="off"
                     />
                   </div>
                 )}
@@ -264,10 +288,15 @@ export function WorkflowFormModal({
             <Label htmlFor="notes">Notes (Optional)</Label>
             <Textarea
               id="notes"
+              name="notes"
               value={formData.notes}
               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
               placeholder="Add any additional notes or context..."
               rows={3}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
             />
           </div>
 
