@@ -18,8 +18,8 @@ interface MessageStateContextType {
   setSelectedMessageContent: (value: string) => void;
   
   // Refs
-  messagesEndRef: React.RefObject<HTMLDivElement>;
-  scrollAreaRef: React.RefObject<HTMLDivElement>;
+  messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  scrollAreaRef: React.RefObject<HTMLDivElement | null>;
   
   // Error State
   lastError: string | null;

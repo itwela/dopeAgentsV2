@@ -21,7 +21,7 @@ interface MessagesListProps {
   toggleToolCallsExpansion: (index: number) => void;
   toggleToolResultExpansion: (index: number) => void;
   onCopyMessage: (content: any, messageIndex: number) => void;
-  messagesEndRef: React.RefObject<HTMLDivElement>;
+  messagesEndRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export function MessagesList({
