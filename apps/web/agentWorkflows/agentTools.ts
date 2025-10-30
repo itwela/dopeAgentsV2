@@ -463,6 +463,37 @@ execute: async (input) => {
 }
 });
 
+// Get Workflow Context Tool
+const getWorkflowContextTool = tool({
+    name: 'get_workflow_context',
+    description: 'Fetch the complete analysis and context from a workflow run. Use this when the user is discussing a specific client or workflow and you need detailed information about the workflow steps and results.',
+    parameters: z.object({
+        workflowRunId: z.string().describe('The workflow run ID to fetch context for'),
+    }),
+    execute: async (input) => {
+        const { workflowRunId } = input;
+        const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+        
+        try {
+            const workflowResults = await convex.query(convexApi.threads.getWorkflowResults, { workflowRunId });
+            
+            if (!workflowResults || workflowResults.length === 0) {
+                return `No workflow results found for workflow ID: ${workflowRunId}`;
+            }
+            
+            // Format the workflow results into a readable context
+            const formattedContext = workflowResults.map(result => {
+                return `## Step ${result.stepNumber}: ${result.stepTitle}\n\n${result.response}`;
+            }).join('\n\n---\n\n');
+            
+            return `# Workflow Analysis Results\n\n${formattedContext}`;
+        } catch (error) {
+            console.error('Error fetching workflow context:', error);
+            return `Error fetching workflow context: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        }
+    },
+});
+
 // Consolidated style guide prompt used by Hermes instructions
 const STYLE_GUIDE_PROMPT_HERMES = `You are a smart content formatter. Your job is to improve readability and structure while preserving ALL important information, especially emails, code, and specific data.
 
@@ -592,6 +623,9 @@ const TOOL_DISPLAY_NAMES = {
   'dope_active_account_lookup': '📊 Account Lookup',
   'dope_active_account_upsert': '➕ Add Account',
   
+  // Workflow Tools
+  'get_workflow_context': '🔄 Get Workflow Context',
+  
   // Web Tools
   'web_search': '🌐 Web Search',
   
@@ -630,4 +664,4 @@ const getToolDisplayName = (toolName: string): string => {
 
 
 
-export { listTemplatesTool, listHowToGenerateAProsal, facilitateStandupTool, pineconeListIndexesTool, pineconeCreateIndexTool, pineconeAddEmployeeDataToIndexTool, pineconeAddTranscriptDataToIndexTool, pineconeAddToIndexTool, pineconeSemanticSearchTool, pineconeCompanyKnowledgeSemanticSearchTool, pineconeEmployeeDataSemanticSearchTool, pineconeTranscriptDataSemanticSearchTool, pineconeEmailTemplatesSemanticSearchTool, pineconeFaqDataSemanticSearchTool, dopeActiveAccountLookupTool, dopeActiveAccountUpsertTool, TOOL_DISPLAY_NAMES, STYLE_GUIDE_PROMPT_HERMES, whoIsDopeMarketing, dopeVoice, howToGenerateAProsal, getToolDisplayName };
+export { listTemplatesTool, listHowToGenerateAProsal, facilitateStandupTool, pineconeListIndexesTool, pineconeCreateIndexTool, pineconeAddEmployeeDataToIndexTool, pineconeAddTranscriptDataToIndexTool, pineconeAddToIndexTool, pineconeSemanticSearchTool, pineconeCompanyKnowledgeSemanticSearchTool, pineconeEmployeeDataSemanticSearchTool, pineconeTranscriptDataSemanticSearchTool, pineconeEmailTemplatesSemanticSearchTool, pineconeFaqDataSemanticSearchTool, dopeActiveAccountLookupTool, dopeActiveAccountUpsertTool, getWorkflowContextTool, TOOL_DISPLAY_NAMES, STYLE_GUIDE_PROMPT_HERMES, whoIsDopeMarketing, dopeVoice, howToGenerateAProsal, getToolDisplayName };

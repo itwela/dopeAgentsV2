@@ -5,7 +5,7 @@ import { Button } from "./ui/button"
 import { Textarea } from "./ui/textarea"
 import { Badge } from "./ui/badge"
 import { Label } from "./ui/label"
-import { Plus, Check, X, Mic, MicOff, Loader2, Send, ArrowUp, ArrowDown } from "lucide-react"
+import { Plus, Check, X, Mic, MicOff, Loader2, Send, ArrowUp, ArrowDown, Workflow } from "lucide-react"
 import { TextAnimate } from "./ui/text-animate"
 import { motion } from "framer-motion"
 
@@ -35,8 +35,15 @@ export interface ChatInputProps {
   onScrollToTop?: () => void
   onScrollToBottom?: () => void
   toolsContainerRef: React.RefObject<HTMLDivElement | null>
+  workflowsContainerRef: React.RefObject<HTMLDivElement | null>
   textareaRef: React.RefObject<HTMLTextAreaElement | null>
   placeholder: string
+  // Workflow props
+  availableWorkflows?: Array<{workflowRunId: string, title: string, clientName?: string}>
+  isWorkflowsOpen: boolean
+  setIsWorkflowsOpen: (open: boolean) => void
+  selectedWorkflowId: string | null
+  onSelectWorkflow: (workflowId: string | null) => void
 }
 
 export function ChatInput(props: ChatInputProps) {
@@ -64,6 +71,12 @@ export function ChatInput(props: ChatInputProps) {
     toolsContainerRef,
     textareaRef,
     placeholder,
+    // Workflow props
+    availableWorkflows,
+    isWorkflowsOpen,
+    setIsWorkflowsOpen,
+    selectedWorkflowId,
+    onSelectWorkflow,
   } = props
 
   const autoResizeTextarea = (el: HTMLTextAreaElement | null) => {
@@ -75,7 +88,8 @@ export function ChatInput(props: ChatInputProps) {
   const hasCurrentAgentTools = !!currentAgentInfo?.tools?.length
 
   return (
-    <div className="p-4 bg-transparent max-w-3xl w-[75%] bottom-0 fixed relative place-self-center">
+    // edit this here
+    <div className="p-2 solid-input-bg rounded-xl max-w-3xl w-[75%] bottom-0 fixed  place-self-center">
       
       {/* NOTE: Tools Dropdown */}
       {isToolsOpen && hasCurrentAgentTools ? (
@@ -138,7 +152,76 @@ export function ChatInput(props: ChatInputProps) {
         </div>
       ) : null}
 
-      <div className="relative glass-input rounded-xl hover:border-ring transition-all duration-300 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/50 mb-3">
+      {/* NOTE: Workflows Dropdown */}
+      {isWorkflowsOpen && availableWorkflows && availableWorkflows.length > 0 ? (
+        <div ref={toolsContainerRef} className="mb-3 rounded-xl glass-card p-2 shadow-lg" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between px-2 py-1">
+            <div className="text-xs text-muted-foreground">Workflows</div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs hover:text-primary"
+              onClick={() => setIsWorkflowsOpen(false)}
+              disabled={isLoading}
+            >
+              Hide
+            </Button>
+          </div>
+          <motion.div
+            className="mt-1 space-y-1"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              visible: {
+                transition: {
+                  staggerChildren: 0.08,
+                  delayChildren: 0.1
+                }
+              }
+            }}
+          >
+            {availableWorkflows.map((workflow) => (
+              <motion.div
+                key={workflow.workflowRunId}
+                variants={{
+                  hidden: { opacity: 0, y: -20 },
+                  visible: {
+                    opacity: 1,
+                    y: 0,
+                    transition: {
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 25
+                    }
+                  }
+                }}
+              >
+                <Button
+                  variant={selectedWorkflowId === workflow.workflowRunId ? "default" : "outline"}
+                  size="sm"
+                  className="justify-start text-xs h-10 hover:text-primary w-full"
+                  onClick={() => onSelectWorkflow(selectedWorkflowId === workflow.workflowRunId ? null : workflow.workflowRunId)}
+                  disabled={isLoading}
+                  title={`Workflow: ${workflow.title}`}
+                >
+                  <Workflow className="h-3 w-3 mr-2" />
+                  <div className="flex flex-col items-start text-left">
+                    <span className="truncate">{workflow.title}</span>
+                    {workflow.clientName && (
+                      <span className="text-xs opacity-70 truncate">
+                        Client: {workflow.clientName}
+                      </span>
+                    )}
+                  </div>
+                  {selectedWorkflowId === workflow.workflowRunId && <Check className="h-3 w-3 ml-1" />}
+                </Button>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      ) : null}
+
+      <div className="relative bg-card border border-border rounded-xl hover:border-ring transition-all duration-300 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/50 mb-3">
         <div className="flex items-end p-3 gap-2">
           <Textarea
             ref={textareaRef}
@@ -177,6 +260,22 @@ export function ChatInput(props: ChatInputProps) {
               </Button>
             )}
 
+            {!isWorkflowsOpen && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 w-7 p-0 rounded-full hover:text-primary"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsWorkflowsOpen(true)
+                }}
+                disabled={!availableWorkflows || availableWorkflows.length === 0}
+                title="Show workflows"
+              >
+                <Workflow className="h-3 w-3" />
+              </Button>
+            )}
+
             {onScrollToTop && (
               <Button
                 variant="outline"
@@ -210,6 +309,21 @@ export function ChatInput(props: ChatInputProps) {
                   title={`Remove ${getToolDisplayName(selectedTools[0])}`}
                 >
                   {getToolDisplayName(selectedTools[0])}
+                  <X className="h-3 w-3 ml-1" />
+                </Badge>
+              </div>
+            )}
+
+            {selectedWorkflowId && availableWorkflows && (
+              <div className="flex flex-wrap gap-1">
+                <Badge
+                  variant="secondary"
+                  className="text-xs px-2 py-1 cursor-pointer hover:bg-primary hover:text-white transition-colors"
+                  onClick={() => onSelectWorkflow(null)}
+                  title={`Remove workflow context`}
+                >
+                  <Workflow className="h-3 w-3 mr-1" />
+                  {availableWorkflows.find(w => w.workflowRunId === selectedWorkflowId)?.title || 'Workflow'}
                   <X className="h-3 w-3 ml-1" />
                 </Badge>
               </div>

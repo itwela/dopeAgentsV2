@@ -11,7 +11,7 @@ import {
     MCPServerStdio,
 } from '@openai/agents';
 
-import { dopeVoice, STYLE_GUIDE_PROMPT_HERMES, whoIsDopeMarketing, listTemplatesTool, dopeActiveAccountLookupTool, listHowToGenerateAProsal, pineconeCompanyKnowledgeSemanticSearchTool, pineconeEmailTemplatesSemanticSearchTool, pineconeTranscriptDataSemanticSearchTool, pineconeFaqDataSemanticSearchTool, pineconeEmployeeDataSemanticSearchTool, facilitateStandupTool, pineconeListIndexesTool, pineconeCreateIndexTool, pineconeAddToIndexTool, pineconeAddEmployeeDataToIndexTool, pineconeAddTranscriptDataToIndexTool, pineconeSemanticSearchTool } from './agentTools';
+import { dopeVoice, STYLE_GUIDE_PROMPT_HERMES, whoIsDopeMarketing, listTemplatesTool, dopeActiveAccountLookupTool, listHowToGenerateAProsal, pineconeCompanyKnowledgeSemanticSearchTool, pineconeEmailTemplatesSemanticSearchTool, pineconeTranscriptDataSemanticSearchTool, pineconeFaqDataSemanticSearchTool, pineconeEmployeeDataSemanticSearchTool, facilitateStandupTool, pineconeListIndexesTool, pineconeCreateIndexTool, pineconeAddToIndexTool, pineconeAddEmployeeDataToIndexTool, pineconeAddTranscriptDataToIndexTool, pineconeSemanticSearchTool, getWorkflowContextTool } from './agentTools';
 
 const zipCodeAnalysisAgentCore = new Agent({
     name: 'MarketAnalyst',
@@ -362,6 +362,7 @@ const hermesAgent = new Agent({
     
     **Account Management Tools:**
     - **dope_active_account_lookup**: Look up active DOPE Marketing accounts by name to get monthly send data
+    - **get_workflow_context**: Fetch complete workflow analysis results when a workflow is selected or when the user asks about a specific client workflow
     
     **Company Knowledge Tools:**
     - **pinecone_company_knowledge_semantic_search**: Search for company knowledge in the Pinecone index
@@ -371,6 +372,18 @@ const hermesAgent = new Agent({
 
     Use these company knowledge tools to help the account manager with account management and weaving in company knowledge into the responses.
 
+    ## 🔄 **Workflow Context Usage:**
+    IMPORTANT: When you see "[WORKFLOW SELECTED: workflow_id_xxxxx]" in a user message, it means a workflow has been selected for context. You should use the **get_workflow_context** tool to fetch the complete workflow analysis ONLY when:
+    - The user asks specific questions about the workflow results, client analysis, or workflow data
+    - You need detailed information to answer their question accurately
+    - The user wants you to reference or elaborate on workflow findings
+    
+    DO NOT fetch workflow context if:
+    - The user is just having a general conversation
+    - The question doesn't require workflow-specific details
+    - You can answer without the workflow data
+    - If you already have the workflow context in the conversation history
+
     You are an agent created to assist account managers with account management at Dope Marketing.
 
   
@@ -379,7 +392,8 @@ const hermesAgent = new Agent({
     `,
   handoffDescription: 'Hermes - Account Manager Assistant - Uses tools to help the account manager with account management.',
   tools: [ 
-    dopeActiveAccountLookupTool,  // Account lookup tool for testing
+    dopeActiveAccountLookupTool,
+    getWorkflowContextTool,
     listHowToGenerateAProsal, 
     pineconeCompanyKnowledgeSemanticSearchTool, 
     pineconeEmailTemplatesSemanticSearchTool, 
@@ -406,6 +420,9 @@ const steveAgent = new Agent({
     
     When users need leadership support, team development, or meeting facilitation, use your tools to provide structured guidance. For other specialized tasks, hand off to the appropriate agent.
     
+    ## 🔄 **Workflow Context Usage:**
+    When you see "[WORKFLOW SELECTED: workflow_id_xxxxx]" in a user message, it means a workflow has been selected. Use the **get_workflow_context** tool to fetch the workflow analysis ONLY when the user asks about workflow-specific information or when you need workflow details to answer their question accurately.
+    
     SOME TIPS:
       - Be genuinely helpful and interested
       - Ask follow-up questions to keep chatting
@@ -413,7 +430,7 @@ const steveAgent = new Agent({
       - Ask engaging follow-up questions
     `,
     handoffDescription: 'Steve - Leadership Agent - Enhances team collaboration and development using CliftonStrengths and employee profiles.',
-    tools: [facilitateStandupTool, pineconeCompanyKnowledgeSemanticSearchTool, pineconeEmployeeDataSemanticSearchTool, pineconeTranscriptDataSemanticSearchTool, webSearchTool()],
+    tools: [getWorkflowContextTool, facilitateStandupTool, pineconeCompanyKnowledgeSemanticSearchTool, pineconeEmployeeDataSemanticSearchTool, pineconeTranscriptDataSemanticSearchTool, webSearchTool()],
     model: "gpt-5-mini",
     modelSettings: {
       parallelToolCalls: true,

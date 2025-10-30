@@ -12,7 +12,7 @@ import { Badge } from "../../components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { BentoGrid, BentoCard } from "../../src/components/ui/bento-grid";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../../components/ui/dropdown-menu";
-import { Plus, Play, MessageSquare, Loader2, Trash2, Copy, Check } from "lucide-react";
+import { Plus, Play, MessageSquare, Loader2, Trash2, Copy, Check, Pencil, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -46,6 +46,9 @@ export default function WorkflowsPage() {
   const [expandedWorkflowId, setExpandedWorkflowId] = useState<string | null>(null);
   const [isWorkflowResultsExpanded, setIsWorkflowResultsExpanded] = useState(false);
   const [copiedWorkflowId, setCopiedWorkflowId] = useState<string | null>(null);
+  const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string>("");
+  const [isSavingTitle, setIsSavingTitle] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Mutations
@@ -55,6 +58,7 @@ export default function WorkflowsPage() {
   const createThreadFromWorkflow = useMutation(api.threads.createThreadFromWorkflow);
   const createClient = useMutation(api.clients.createClient);
   const deleteWorkflowRun = useMutation(api.threads.deleteWorkflowRun);
+  const updateWorkflowRun = useMutation(api.threads.updateWorkflowRun);
   
   // Queries
   const workflowRuns = useQuery(
@@ -511,6 +515,7 @@ export default function WorkflowsPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setSelectedClient(null)}
+                className="hover:text-primary"
               >
                 Back to All Clients
               </Button>
@@ -527,7 +532,60 @@ export default function WorkflowsPage() {
                       <CardContent className="pt-6">
                         <div className="flex items-center justify-between cursor-pointer" onClick={() => setExpandedWorkflowId(isExpanded ? null : workflow.workflowRunId)}>
                           <div className="flex-1">
-                            <h3 className="font-semibold text-sm mb-1">{workflow.title}</h3>
+                            {editingWorkflowId === workflow.workflowRunId ? (
+                              <div className="flex items-center gap-2 mb-1" onClick={(e) => e.stopPropagation()}>
+                                <Input
+                                  value={editingTitle}
+                                  onChange={(e) => setEditingTitle(e.target.value)}
+                                  className="h-8 text-sm"
+                                  placeholder="Edit title"
+                                />
+                                <Button
+                                  size="sm"
+                                  className="h-8 px-2"
+                                  disabled={isSavingTitle || !editingTitle.trim()}
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (!editingTitle.trim()) return;
+                                    try {
+                                      setIsSavingTitle(true);
+                                      await updateWorkflowRun({ workflowRunId: workflow.workflowRunId, title: editingTitle.trim() });
+                                      setEditingWorkflowId(null);
+                                    } catch (err) {
+                                      console.error('Failed to update title', err);
+                                      alert('Failed to update title');
+                                    } finally {
+                                      setIsSavingTitle(false);
+                                    }
+                                  }}
+                                  title="Save"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2 hover:text-primary"
+                                  onClick={(e) => { e.stopPropagation(); setEditingWorkflowId(null); setEditingTitle(""); }}
+                                  title="Cancel"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 mb-1" onClick={(e) => e.stopPropagation()}>
+                                <h3 className="font-semibold text-sm">{workflow.title}</h3>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 hover:text-primary"
+                                  onClick={() => { setEditingWorkflowId(workflow.workflowRunId); setEditingTitle(workflow.title || ""); }}
+                                  title="Edit title"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            )}
                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
                               <span>{new Date(workflow.createdAt).toLocaleDateString()}</span>
                               <span>•</span>
@@ -565,6 +623,7 @@ export default function WorkflowsPage() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              className="hover:text-primary"
                             >
                               {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                             </Button>
