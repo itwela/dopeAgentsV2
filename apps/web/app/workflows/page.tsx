@@ -21,6 +21,7 @@ import { WorkflowFormModal, WorkflowFormData } from "../../components/workflow-f
 import { Timeline } from "../../components/ui/timeline";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { motion } from "framer-motion";
+import { GameBox } from "../../components/gamebox";
 
 // Predefined workflow templates
 const WORKFLOW_TEMPLATES = [
@@ -49,6 +50,8 @@ export default function WorkflowsPage() {
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string>("");
   const [isSavingTitle, setIsSavingTitle] = useState(false);
+  const [showWorkflowGame, setShowWorkflowGame] = useState(false);
+  const [workflowGameDismissed, setWorkflowGameDismissed] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Mutations
@@ -125,6 +128,14 @@ export default function WorkflowsPage() {
       }, 30000); // Close after 30 seconds
 
       return () => clearTimeout(timer);
+    }
+  }, [activeWorkflowRun?.status]);
+
+  // Reset game state when workflow completes or errors
+  useEffect(() => {
+    if (activeWorkflowRun?.status === "completed" || activeWorkflowRun?.status?.includes("error")) {
+      setShowWorkflowGame(false);
+      setWorkflowGameDismissed(false);
     }
   }, [activeWorkflowRun?.status]);
 
@@ -310,7 +321,7 @@ export default function WorkflowsPage() {
         {activeWorkflowRunId && (
           <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-4 transition-all duration-300">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col items-start gap-2">
                 <div className="flex items-center gap-2">
                   {activeWorkflowRun?.status === "completed" ? (
                     <>
@@ -340,7 +351,7 @@ export default function WorkflowsPage() {
                   )}
                 </div>
                 
-                {/* Progress indicator */}
+                {/* Progress indicator (now below status) */}
                 {activeWorkflowResults && activeWorkflowResults.length > 0 && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{activeWorkflowResults.length} step{activeWorkflowResults.length !== 1 ? 's' : ''} completed</span>
@@ -388,6 +399,40 @@ export default function WorkflowsPage() {
                 </Button>
               </div>
             </div>
+
+            {/* Game box under entire header row when running */}
+            {activeWorkflowRun?.status !== "completed" && activeWorkflowRun?.status?.includes("error") === false && !showWorkflowGame && !workflowGameDismissed && (
+              <div className="mt-4 w-full flex justify-center">
+                <div className="bg-muted/50 border border-border rounded-lg p-4 w-full max-w-3xl">
+                  <p className="text-sm text-muted-foreground mb-3 text-center">
+                    Would you like to play a game while you wait?
+                  </p>
+                  <div className="flex items-center justify-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => setShowWorkflowGame(true)}
+                      className="text-xs"
+                    >
+                      Yes, let's play!
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setWorkflowGameDismissed(true)}
+                      className="text-xs"
+                    >
+                      No thanks
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeWorkflowRun?.status !== "completed" && activeWorkflowRun?.status?.includes("error") === false && showWorkflowGame && (
+              <div className="mt-4 w-full flex justify-center">
+                <GameBox className="w-full max-w-3xl" />
+              </div>
+            )}
             
             {/* Expanded Results */}
             {isWorkflowResultsExpanded && activeWorkflowResults && activeWorkflowResults.length > 0 && (

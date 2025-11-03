@@ -1,9 +1,12 @@
 "use client"
 
+import { useState, useEffect } from "react";
 import { ChatMessage, ChatAgent } from "../../interfaces/agentChatInterfaces";
 import AITextLoading from "../ui/ai-text-loading";
+import { GameBox } from "../gamebox";
 import { MessageBubble } from "./message-bubble";
 import { ToolResultMessage } from "./tool-result-message";
+import { Button } from "../ui/button";
 
 interface MessagesListProps {
   messages: ChatMessage[];
@@ -42,6 +45,16 @@ export function MessagesList({
   onCopyMessage,
   messagesEndRef,
 }: MessagesListProps) {
+  const [showGame, setShowGame] = useState(false);
+  const [gameDismissed, setGameDismissed] = useState(false);
+
+  // Reset game state when loading stops
+  useEffect(() => {
+    if (!isLoading) {
+      setShowGame(false);
+      setGameDismissed(false);
+    }
+  }, [isLoading]);
   return (
     <div className="space-y-4 w-full w-[80%] hide-scrollbar">
       {messages.map((message, index) => {
@@ -93,6 +106,39 @@ export function MessagesList({
             className="text-sm font-medium text-muted-foreground"
             interval={3618}
           />
+        </div>
+      )}
+
+      {isLoading && thinkingDuration >= 10 && !showGame && !gameDismissed && (
+        <div className="mt-3 w-[67%] flex place-self-start items-start justify-start">
+          <div className="bg-muted/50 border border-border rounded-lg p-4 w-full">
+            <p className="text-sm text-muted-foreground mb-3">
+              Would you like to play a game while you wait?
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => setShowGame(true)}
+                className="text-xs"
+              >
+                Yes, let's play!
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setGameDismissed(true)}
+                className="text-xs"
+              >
+                No thanks
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isLoading && thinkingDuration >= 10 && showGame && (
+        <div className="mt-3 w-[67%] flex place-self-start items-start justify-start">
+          <GameBox className="w-full" />
         </div>
       )}
 
