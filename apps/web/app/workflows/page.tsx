@@ -12,6 +12,7 @@ import { Badge } from "../../components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { BentoGrid, BentoCard } from "../../src/components/ui/bento-grid";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../../components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Plus, Play, MessageSquare, Loader2, Trash2, Copy, Check, Pencil, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
@@ -52,6 +53,10 @@ export default function WorkflowsPage() {
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [showWorkflowGame, setShowWorkflowGame] = useState(false);
   const [workflowGameDismissed, setWorkflowGameDismissed] = useState(false);
+  const [deleteClientId, setDeleteClientId] = useState<string | null>(null);
+  const [deleteClientName, setDeleteClientName] = useState<string>("");
+  const [deleteClientWorkflowCount, setDeleteClientWorkflowCount] = useState<number>(0);
+  const [isDeletingClient, setIsDeletingClient] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Mutations
@@ -60,6 +65,7 @@ export default function WorkflowsPage() {
   const updateWorkflowStatus = useMutation(api.threads.updateWorkflowRunStatus);
   const createThreadFromWorkflow = useMutation(api.threads.createThreadFromWorkflow);
   const createClient = useMutation(api.clients.createClient);
+  const deleteClient = useMutation(api.clients.deleteClient);
   const deleteWorkflowRun = useMutation(api.threads.deleteWorkflowRun);
   const updateWorkflowRun = useMutation(api.threads.updateWorkflowRun);
   
@@ -243,6 +249,37 @@ export default function WorkflowsPage() {
     } catch (error) {
       console.error("Failed to delete workflow:", error);
       alert("Failed to delete workflow: " + error);
+    }
+  };
+
+  const handleDeleteClientClick = (clientId: string, clientName: string, workflowCount: number, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent selecting the client
+    setDeleteClientId(clientId);
+    setDeleteClientName(clientName);
+    setDeleteClientWorkflowCount(workflowCount);
+  };
+
+  const handleDeleteClientConfirm = async () => {
+    if (!deleteClientId) return;
+    
+    try {
+      setIsDeletingClient(true);
+      await deleteClient({ clientId: deleteClientId });
+      
+      // Clear selection if deleted client was selected
+      if (selectedClient === deleteClientId) {
+        setSelectedClient(null);
+      }
+      
+      // Close dialog
+      setDeleteClientId(null);
+      setDeleteClientName("");
+      setDeleteClientWorkflowCount(0);
+    } catch (error) {
+      console.error("Failed to delete client:", error);
+      alert("Failed to delete client: " + error);
+    } finally {
+      setIsDeletingClient(false);
     }
   };
 
@@ -515,7 +552,7 @@ export default function WorkflowsPage() {
                       }
                     }
                   }}
-                  className={`bg-background border rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer ${
+                  className={`relative bg-background border rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer group overflow-hidden ${
                     isSelected ? 'ring-2 ring-primary' : ''
                   }`}
                   onClick={() => {
@@ -524,16 +561,27 @@ export default function WorkflowsPage() {
                     }
                   }}
                 >
-                  <div className="flex flex-col gap-3 text-center">
-                    <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center mx-auto">
+                  {!client.isEmpty && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-2 right-2 h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10 z-10"
+                      onClick={(e) => handleDeleteClientClick(client.clientId, client.name, workflowCount, e)}
+                      title="Delete client"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <div className="flex flex-col gap-3 text-center min-w-0">
+                    <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center mx-auto flex-shrink-0">
                       <span className={`text-sm font-semibold text-muted-foreground ${client.isEmpty ? 'opacity-50' : 'opacity-100'}`}>
                         {client.isEmpty ? "" : (client.initials || client.name?.substring(0, 2).toUpperCase() || "")}
                       </span>
                     </div>
-                    <h3 className={`font-semibold text-foreground ${client.isEmpty ? 'opacity-20' : 'opacity-100'}`}>
+                    <h3 className={`font-semibold text-foreground break-words line-clamp-2 px-1 ${client.isEmpty ? 'opacity-20' : 'opacity-100'}`}>
                       {client.isEmpty ? "______" : client.name}
                     </h3>
-                    <p className={`text-sm text-muted-foreground ${client.isEmpty ? 'opacity-50' : 'opacity-100'}`}>
+                    <p className={`text-sm text-muted-foreground truncate w-full px-1 ${client.isEmpty ? 'opacity-50' : 'opacity-100'}`}>
                       {client.isEmpty 
                         ? "Start a workflow.." 
                         : workflowCount === 0 
@@ -722,6 +770,59 @@ export default function WorkflowsPage() {
           onSubmit={handleWorkflowFormSubmit}
           workflowTitle={WORKFLOW_TEMPLATES.find(w => w.id === selectedWorkflowTemplate)?.name || "Workflow"}
         />
+
+        {/* Delete Client Confirmation Dialog */}
+        <Dialog open={deleteClientId !== null} onOpenChange={(open) => {
+          if (!open) {
+            setDeleteClientId(null);
+            setDeleteClientName("");
+            setDeleteClientWorkflowCount(0);
+          }
+        }}>
+          <DialogContent className="bg-white">
+            <DialogHeader>
+              <DialogTitle>Delete Client</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete <strong>{deleteClientName}</strong>?
+              </DialogDescription>
+            </DialogHeader>
+            {deleteClientWorkflowCount > 0 && (
+              <div className="py-4">
+                <p className="text-sm text-destructive">
+                  This will also permanently delete <strong>{deleteClientWorkflowCount} workflow{deleteClientWorkflowCount !== 1 ? 's' : ''}</strong> and all associated workflow results for this client. This action cannot be undone.
+                </p>
+              </div>
+            )}
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDeleteClientId(null);
+                  setDeleteClientName("");
+                  setDeleteClientWorkflowCount(0);
+                }}
+                disabled={isDeletingClient}
+                className="hover:text-primary"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteClientConfirm}
+                disabled={isDeletingClient}
+              >
+                {isDeletingClient ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete Client"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );

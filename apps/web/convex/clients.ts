@@ -102,7 +102,7 @@ export const updateClient = mutation({
   },
 });
 
-// Delete a client
+// Delete a client and all associated workflows and their results
 export const deleteClient = mutation({
   args: {
     clientId: v.string(),
@@ -117,6 +117,34 @@ export const deleteClient = mutation({
       throw new Error("Client not found");
     }
     
-    return await ctx.db.delete(client._id);
+    // Get all workflows for this client
+    const workflows = await ctx.db
+      .query("workflowRuns")
+      .withIndex("by_client_name", (q) => q.eq("clientName", client.name))
+      .collect();
+    
+    // Delete all workflow results for each workflow
+    for (const workflow of workflows) {
+      const results = await ctx.db
+        .query("workflowResults")
+        .withIndex("by_workflow_run_id", (q) => q.eq("workflowRunId", workflow.workflowRunId))
+        .collect();
+      
+      for (const result of results) {
+        await ctx.db.delete(result._id);
+      }
+      
+      // Delete the workflow run
+      await ctx.db.delete(workflow._id);
+    }
+    
+    // Finally, delete the client
+    await ctx.db.delete(client._id);
+    
+    return { 
+      success: true, 
+      deletedWorkflows: workflows.length,
+      deletedResults: workflows.reduce((sum, w) => sum + (w as any)._resultsCount || 0, 0)
+    };
   },
 });
